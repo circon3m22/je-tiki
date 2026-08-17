@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 const supabaseHostname = (() => {
   try {
     return process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -11,9 +13,14 @@ const supabaseHostname = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  output: "export",
+  basePath,
+  assetPrefix: basePath || undefined,
+  trailingSlash: true,
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     remotePatterns: supabaseHostname
       ? [
@@ -24,21 +31,6 @@ const nextConfig: NextConfig = {
           },
         ]
       : [],
-  },
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
-          },
-        ],
-      },
-    ];
   },
 };
 

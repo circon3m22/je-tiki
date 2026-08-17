@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CatalogClient } from "@/components/catalog-client";
+import {
+  CatalogSearchSummary,
+  SearchableCatalog,
+} from "@/components/catalog-search";
 import { getProducts } from "@/lib/catalog";
 
 export const metadata: Metadata = {
@@ -10,12 +15,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/catalog" },
 };
 
-export default async function CatalogPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ search?: string }>;
-}) {
-  const { search = "" } = await searchParams;
+export default async function CatalogPage() {
   const products = await getProducts();
 
   return (
@@ -30,13 +30,13 @@ export default async function CatalogPage({
             которое останется с вами надолго.
           </p>
         </div>
-        {search ? (
-          <p className="mt-7 text-sm">
-            Результаты по запросу: <strong>«{search}»</strong>
-          </p>
-        ) : null}
+        <Suspense>
+          <CatalogSearchSummary />
+        </Suspense>
       </header>
-      <CatalogClient products={products} initialSearch={search} />
+      <Suspense fallback={<CatalogClient products={products} />}>
+        <SearchableCatalog products={products} />
+      </Suspense>
     </>
   );
 }

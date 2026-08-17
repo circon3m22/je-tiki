@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { OrderStatus } from "@/components/order-status";
+import { OrderStatusFromUrl } from "@/components/order-status-from-url";
 
 export const metadata: Metadata = {
   title: "Статус заказа",
   robots: { index: false, follow: false },
 };
 
-export default async function OrderSuccessPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ order?: string }>;
-}) {
-  const { order = null } = await searchParams;
-  return <OrderStatus orderNumber={order} />;
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={<OrderStatus orderNumber={null} />}>
+      <OrderStatusFromUrl />
+    </Suspense>
+  );
 }
