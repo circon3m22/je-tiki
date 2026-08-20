@@ -17,38 +17,67 @@ export type HomeCollection = {
 
 export function CollectionShowcase({ collection }: { collection: HomeCollection }) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const firstSetRef = useRef<HTMLDivElement>(null);
   const setWidthRef = useRef(0);
   const reducedMotionRef = useRef(false);
+  const transformMotionRef = useRef(false);
+  const mobileAnimationRef = useRef<Animation | null>(null);
   const dragRef = useRef({ startX: 0, lastX: 0, moved: false, active: false, pointerDown: false, pointerId: -1 });
   const [dragging, setDragging] = useState(false);
+  const [mobileAutoMotion, setMobileAutoMotion] = useState(false);
 
   const normalizeScroll = () => {
     const viewport = viewportRef.current;
     const setWidth = setWidthRef.current;
-    if (!viewport || !setWidth) return;
+    if (!viewport || !setWidth || transformMotionRef.current) return;
     if (viewport.scrollLeft >= setWidth * 2) viewport.scrollLeft -= setWidth;
     else if (viewport.scrollLeft <= 1) viewport.scrollLeft += setWidth;
   };
 
   useEffect(() => {
     const viewport = viewportRef.current;
+    const track = trackRef.current;
     const firstSet = firstSetRef.current;
-    if (!viewport || !firstSet || !collection.products.length) return;
+    if (!viewport || !track || !firstSet || !collection.products.length) return;
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const syncReducedMotion = () => {
+    const mobileViewport = window.matchMedia("(max-width: 48rem)");
+    const syncMotionMode = () => {
       reducedMotionRef.current = reducedMotion.matches;
-    };
-    syncReducedMotion();
-    reducedMotion.addEventListener("change", syncReducedMotion);
-    const measure = () => {
-      setWidthRef.current = firstSet.getBoundingClientRect().width;
-      if (setWidthRef.current && (viewport.scrollLeft < 1 || viewport.scrollLeft >= setWidthRef.current * 2)) {
+      const useTransformMotion = mobileViewport.matches && !reducedMotion.matches && setWidthRef.current > 0;
+      transformMotionRef.current = useTransformMotion;
+      setMobileAutoMotion(useTransformMotion);
+      mobileAnimationRef.current?.cancel();
+      mobileAnimationRef.current = null;
+
+      if (useTransformMotion) {
+        const setWidth = setWidthRef.current;
+        viewport.scrollLeft = 0;
+        mobileAnimationRef.current = track.animate(
+          [
+            { transform: `translate3d(${-setWidth}px, 0, 0)` },
+            { transform: `translate3d(${-setWidth * 2}px, 0, 0)` },
+          ],
+          {
+            duration: Math.max(12_000, (setWidth / 72) * 1000),
+            iterations: Infinity,
+            easing: "linear",
+          },
+        );
+      } else if (setWidthRef.current && (viewport.scrollLeft < 1 || viewport.scrollLeft >= setWidthRef.current * 2)) {
         viewport.scrollLeft = setWidthRef.current;
       }
     };
+    const measure = () => {
+      const nextWidth = firstSet.getBoundingClientRect().width;
+      if (Math.abs(nextWidth - setWidthRef.current) < 0.5) return;
+      setWidthRef.current = nextWidth;
+      syncMotionMode();
+    };
     measure();
+    reducedMotion.addEventListener("change", syncMotionMode);
+    mobileViewport.addEventListener("change", syncMotionMode);
     const observer = new ResizeObserver(measure);
     observer.observe(firstSet);
 
@@ -57,7 +86,7 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
       const now = performance.now();
       const elapsed = Math.min(now - previous, 40);
       previous = now;
-      if (!reducedMotionRef.current && !dragRef.current.active && setWidthRef.current) {
+      if (!transformMotionRef.current && !reducedMotionRef.current && !dragRef.current.active && setWidthRef.current) {
         viewport.scrollLeft += elapsed * 0.045;
         normalizeScroll();
       }
@@ -66,7 +95,11 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
 
     return () => {
       observer.disconnect();
-      reducedMotion.removeEventListener("change", syncReducedMotion);
+      reducedMotion.removeEventListener("change", syncMotionMode);
+      mobileViewport.removeEventListener("change", syncMotionMode);
+      mobileAnimationRef.current?.cancel();
+      mobileAnimationRef.current = null;
+      transformMotionRef.current = false;
       window.clearInterval(timer);
     };
     // Re-measure when the contents of the repeated set change.
@@ -138,7 +171,7 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
         </div>
       </div>
       {!!collection.products.length && (
-        <div className="collection-marquee" data-dragging={dragging || undefined}>
+        <div className="collection-marquee" data-auto-motion={mobileAutoMotion || undefined} data-dragging={dragging || undefined}>
           <div
             className="collection-marquee-viewport"
             ref={viewportRef}
@@ -151,8 +184,12 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
             onPointerCancel={stopDrag}
             onClickCapture={preventClickAfterDrag}
             onScroll={normalizeScroll}
+            onFocus={() => mobileAnimationRef.current?.pause()}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) mobileAnimationRef.current?.play();
+            }}
           >
-            <div className="collection-marquee-track">
+            <div className="collection-marquee-track" ref={trackRef}>
               <div className="collection-marquee-set" ref={firstSetRef}>
                 {collection.products.map((product) => (
                   <div className="collection-marquee-item" key={`before-${product.slug}`}>
