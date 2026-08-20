@@ -19,14 +19,9 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
   const viewportRef = useRef<HTMLDivElement>(null);
   const firstSetRef = useRef<HTMLDivElement>(null);
   const setWidthRef = useRef(0);
-  const pausedRef = useRef(false);
+  const reducedMotionRef = useRef(false);
   const dragRef = useRef({ startX: 0, lastX: 0, moved: false, active: false, pointerDown: false, pointerId: -1 });
   const [dragging, setDragging] = useState(false);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
 
   const normalizeScroll = () => {
     const viewport = viewportRef.current;
@@ -43,7 +38,7 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const syncReducedMotion = () => {
-      if (reducedMotion.matches) setPaused(true);
+      reducedMotionRef.current = reducedMotion.matches;
     };
     syncReducedMotion();
     reducedMotion.addEventListener("change", syncReducedMotion);
@@ -57,23 +52,22 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
     const observer = new ResizeObserver(measure);
     observer.observe(firstSet);
 
-    let frame = 0;
     let previous = performance.now();
-    const tick = (now: number) => {
+    const tick = () => {
+      const now = performance.now();
       const elapsed = Math.min(now - previous, 40);
       previous = now;
-      if (!pausedRef.current && !dragRef.current.active && setWidthRef.current) {
-        viewport.scrollLeft += elapsed * 0.028;
+      if (!reducedMotionRef.current && !dragRef.current.active && setWidthRef.current) {
+        viewport.scrollLeft += elapsed * 0.045;
         normalizeScroll();
       }
-      frame = window.requestAnimationFrame(tick);
     };
-    frame = window.requestAnimationFrame(tick);
+    const timer = window.setInterval(tick, 16);
 
     return () => {
       observer.disconnect();
       reducedMotion.removeEventListener("change", syncReducedMotion);
-      window.cancelAnimationFrame(frame);
+      window.clearInterval(timer);
     };
     // Re-measure when the contents of the repeated set change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,15 +134,7 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
         </div>
         <p>{collection.description}</p>
         <div className="collection-showcase-actions">
-          <Link className="collection-motion-toggle" href="/catalog">Смотреть в каталоге</Link>
-          <button
-            type="button"
-            className="collection-motion-toggle"
-            aria-pressed={paused}
-            onClick={() => setPaused((value) => !value)}
-          >
-            {paused ? "Продолжить движение" : "Остановить движение"}
-          </button>
+          <Link className="collection-catalog-link" href="/catalog">Смотреть в каталоге</Link>
         </div>
       </div>
       {!!collection.products.length && (
@@ -156,6 +142,9 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
           <div
             className="collection-marquee-viewport"
             ref={viewportRef}
+            role="region"
+            aria-label={`Товары коллекции «${collection.name}»`}
+            tabIndex={0}
             onPointerDown={startDrag}
             onPointerMove={moveDrag}
             onPointerUp={stopDrag}
