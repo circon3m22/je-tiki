@@ -1,0 +1,16 @@
+{
+  "id": "/je-tiki/",
+  "name": "JE TIKI — управление магазином",
+  "short_name": "JE TIKI",
+  "description": "Украшения из дерева с берегов Амура",
+  "start_url": "/je-tiki/admin/",
+  "scope": "/je-tiki/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/je-tiki/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/je-tiki/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/je-tiki/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

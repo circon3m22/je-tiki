@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
-import { OrderStatus } from "@/components/order-status";
+import Link from "next/link";
+import { Suspense } from "react";
+import { OrderSuccess } from "@/components/order-success";
 
-export const metadata: Metadata = {
-  title: "Статус заказа",
-  robots: { index: false, follow: false },
-};
-
-export default async function OrderSuccessPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ order?: string }>;
-}) {
-  const { order = null } = await searchParams;
-  return <OrderStatus orderNumber={order} />;
+export default function OrderSuccessPage() {
+  return (
+    <main id="main-content" className="success-page section-shell">
+      <p className="eyebrow">Заказ принят</p>
+      <h1>Спасибо за ваш выбор.</h1>
+      <Suspense fallback={<p>Заказ принят. Номер отправлен на вашу электронную почту.</p>}>
+        <OrderSuccess />
+      </Suspense>
+      <Link className="primary-button inline" href="/catalog">Вернуться в каталог</Link>
+    </main>
+  );
 }
