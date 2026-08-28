@@ -136,27 +136,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="city-wood" aria-labelledby="city-wood-title">
-        <div className="city-wood-visual">
-          <Image src={woodImage} alt="Предметы JE TIKI из древесины японского вяза" fill sizes="(max-width: 800px) 100vw, 48vw" />
-          <span>Дерево города / новая форма</span>
-        </div>
-        <div className="city-wood-copy">
-          <p className="eyebrow light">{text("city_wood", "eyebrow", "Материал с адресом")}</p>
-          <h2 id="city-wood-title">{text("city_wood", "title", "Город продолжает жить в дереве.")}</h2>
-          <p className="city-wood-lead">{text("city_wood", "text", "Часть материала JE TIKI — древесина японских вязов, которые удаляют в Хабаровске как аварийные деревья. Мы отбираем пригодные фрагменты и забираем их в мастерскую.")}</p>
-          <p className="city-wood-note">{text("city_wood", "note", "Вместо того чтобы оказаться среди отходов, дерево получает новую форму — украшения и небольшие объекты, сделанные в том же городе, где оно росло.")}</p>
-        </div>
-      </section>
-
-      <section className="about section-shell" id="about" aria-labelledby="about-title">
-        <p className="eyebrow">Мастерская</p>
-        <div className="about-grid">
-          <h2 id="about-title">{text("about", "title", "JE TIKI создаёт украшения и небольшие объекты в Хабаровске.")}</h2>
-          <div className="about-copy">
-            <p>{text("about", "paragraph1", "Тёплые, тактильные вещи с локальным характером — для повседневной жизни, подарка и памяти о месте.")}</p>
-            <p>{text("about", "paragraph2", "Кроме украшений мы создаём сувениры и небольшие серии для событий и бизнеса.")}</p>
-            <Link className="text-link" href="/catalog">Смотреть все предметы</Link>
+      <section className="about" id="about" aria-labelledby="about-title">
+        <div className="about-shell section-shell">
+          <p className="eyebrow">Мастерская</p>
+          <div className="about-grid">
+            <h2 id="about-title">{text("about", "title", "JE TIKI создаёт украшения и небольшие объекты в Хабаровске.")}</h2>
+            <div className="about-copy">
+              <p>{text("about", "paragraph1", "Тёплые, тактильные вещи с локальным характером — для повседневной жизни, подарка и памяти о месте.")}</p>
+              <p>{text("about", "paragraph2", "Кроме украшений мы создаём сувениры и небольшие серии для событий и бизнеса.")}</p>
+              <Link className="text-link" href="/catalog">Смотреть все предметы</Link>
+            </div>
           </div>
         </div>
       </section>
