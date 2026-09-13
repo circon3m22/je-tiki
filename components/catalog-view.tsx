@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { products } from "@/lib/products";
 import type { Category } from "@/lib/types";
@@ -24,6 +26,12 @@ const remoteCatalogConfigured = Boolean(
 let cachedCatalogProducts: Product[] | null = null;
 
 export function CatalogView() {
+  return <Suspense fallback={<div className="catalog-loading">Загружаем каталог…</div>}><CatalogContent /></Suspense>;
+}
+
+function CatalogContent() {
+  const searchParams = useSearchParams();
+  const collection = searchParams.get("collection") ?? "";
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(
     () => cachedCatalogProducts ?? (remoteCatalogConfigured ? [] : products),
   );
@@ -33,10 +41,11 @@ export function CatalogView() {
   const [layout, setLayout] = useState<"editorial" | "grid">("grid");
   const filtered = useMemo(
     () =>
-      category === "Все"
-        ? catalogProducts
-        : catalogProducts.filter((product) => product.category === category),
-    [catalogProducts, category],
+      catalogProducts.filter((product) =>
+        (category === "Все" || product.category === category) &&
+        (!collection || product.collection === collection || product.collection.startsWith(`${collection} ·`)),
+      ),
+    [catalogProducts, category, collection],
   );
 
   useEffect(() => {
@@ -73,10 +82,12 @@ export function CatalogView() {
     <>
       <div className="catalog-heading">
         <div>
-          <p className="eyebrow">Коллекция 2026</p>
+          <p className="eyebrow">JE TIKI / Предметы с историей</p>
           <h1>Каталог</h1>
         </div>
+        <p className="catalog-intro">Дальневосточное дерево, природные формы<br />и немного личного смысла.</p>
       </div>
+      {collection && <div className="catalog-collection"><span>{collection}</span><Link href="/catalog" aria-label="Сбросить фильтр коллекции">Все коллекции <span aria-hidden="true">×</span></Link></div>}
 
       <div className="catalog-controls">
         <div className="category-filter" aria-label="Фильтр по категориям">
@@ -107,12 +118,14 @@ export function CatalogView() {
           ? "Загружаем актуальный каталог."
           : `${refreshing ? "Обновляем каталог. " : ""}Показано украшений: ${filtered.length}.${loadFailed ? " Не удалось обновить данные — показан сохранённый каталог." : ""}`}
       </p>
+      <div className="catalog-result-note"><span>{refreshing ? "Обновляем каталог…" : `Предметов: ${filtered.length}`}</span><span>Создано в Хабаровске</span></div>
+      {loadFailed && <p className="catalog-load-note">Не удалось обновить каталог. Показана сохранённая версия.</p>}
       {refreshing && catalogProducts.length === 0 ? (
         <div className="catalog-loading" aria-hidden="true">Загружаем актуальный каталог…</div>
       ) : filtered.length === 0 ? (
         <div className="catalog-empty">
           <p>В этой категории пока нет товаров.</p>
-          <button type="button" className="text-link" onClick={() => setCategory("Все")}>Показать весь каталог</button>
+          <Link className="text-link" href="/catalog" onClick={() => setCategory("Все")}>Показать весь каталог</Link>
         </div>
       ) : (
         <div aria-busy={refreshing} key={layout} className={`catalog-grid catalog-grid--${layout === "grid" ? "uniform" : "editorial"}`}>

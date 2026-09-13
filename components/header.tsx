@@ -56,7 +56,7 @@ export function Header() {
       }
 
       const raw = Math.min(1, Math.max(0, scrollPosition / range));
-      const progress = reducedMotion.matches ? (raw > 0.12 ? 1 : 0) : raw * raw * (3 - 2 * raw);
+      const progress = reducedMotion.matches ? 1 : raw * raw * (3 - 2 * raw);
       const offset = (startCenter - top) * (1 - progress);
       const scale = startScale + (endScale - startScale) * progress;
       const solid = progress > 0.82;
@@ -67,14 +67,10 @@ export function Header() {
       header.classList.toggle("site-header--overlay", !solid);
 
       if (hero) {
-        const copyRange = mobile ? 120 : 180;
-        const copyOpacity = reducedMotion.matches
-          ? (scrollPosition > 24 ? 0 : 1)
-          : Math.max(0, 1 - scrollPosition / copyRange);
-        const parallax = reducedMotion.matches ? 0 : scrollPosition * (mobile ? 0.14 : 0.32);
-        const copyShift = reducedMotion.matches ? 0 : scrollPosition * -0.06;
+        const boundedScroll = Math.min(scrollPosition, hero.offsetHeight);
+        const parallax = reducedMotion.matches ? 0 : boundedScroll * (mobile ? 0.06 : 0.12);
+        const copyShift = reducedMotion.matches ? 0 : boundedScroll * -0.03;
         hero.style.setProperty("--hero-parallax-y", `${parallax}px`);
-        hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
         hero.style.setProperty("--hero-copy-shift", `${copyShift}px`);
       }
     };
@@ -96,7 +92,7 @@ export function Header() {
     };
 
     const requestUpdate = () => {
-      targetScroll = Math.max(0, window.scrollY);
+      targetScroll = Math.min(hero?.offsetHeight || range, Math.max(0, window.scrollY));
       if (reducedMotion.matches) {
         renderedScroll = targetScroll;
         render(renderedScroll);
@@ -115,9 +111,11 @@ export function Header() {
     render(renderedScroll);
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", handleResize);
+    reducedMotion.addEventListener("change", requestUpdate);
     return () => {
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", handleResize);
+      reducedMotion.removeEventListener("change", requestUpdate);
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, [isHome]);

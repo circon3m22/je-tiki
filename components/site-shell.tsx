@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { CartDrawer } from "@/components/cart-drawer";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { SiteMotion } from "@/components/site-motion";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,6 +14,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return <>
     <Header />
     {children}
+    <SiteMotion />
     <Footer />
     <CartDrawer />
   </>;

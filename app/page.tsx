@@ -91,7 +91,7 @@ export default function HomePage() {
         <div className="hero-shade" />
         <div className="hero-copy hero-copy--centered">
           <h1 className="sr-only">JE TIKI — украшения из дерева с берегов Амура</h1>
-          <p className="hero-tagline">Украшения из дерева с берегов Амура</p>
+          <p className="hero-tagline">Украшения из дерева<br />с берегов Амура</p>
           <Link className="hero-link" href="/catalog">
             Перейти в каталог <ArrowIcon className="arrow-icon" />
           </Link>
@@ -99,35 +99,37 @@ export default function HomePage() {
       </section>
 
       <section className="home-intro section-shell" aria-labelledby="home-intro-title">
-        <p className="eyebrow">О JE TIKI</p>
-        <div className="home-intro-grid">
+        <p className="eyebrow" data-reveal>01 / О JE TIKI</p>
+        <div className="home-intro-grid" data-reveal>
           <h2 id="home-intro-title">{text("home_intro", "title", "Современные предметы, в которых слышен Дальний Восток.")}</h2>
           <div>
             <p>{text("home_intro", "paragraph1", "Мы работаем с японским вязом и другими дальневосточными породами. Сохраняем рисунок дерева — он делает каждую вещь единственной.")}</p>
             <p>{text("home_intro", "paragraph2", "Источники форм — нанайский орнамент, природа Приамурья и простая геометрия.")}</p>
+            <Link className="text-link" href="#about">Знакомство с мастерской <ArrowIcon className="arrow-icon" /></Link>
           </div>
         </div>
       </section>
 
       <section className="collection-stories" aria-labelledby="collections-title">
-        <div className="collection-heading section-shell">
-          <p className="eyebrow">Три истории</p>
+        <div className="collection-heading section-shell" data-reveal>
+          <p className="eyebrow">02 / Истории в дереве</p>
           <h2 id="collections-title">Коллекции</h2>
+          <span className="section-counter" aria-hidden="true">({String(liveCollections.length).padStart(2, "0")})</span>
         </div>
         <div className="collection-list">
-          {liveCollections.map((collection) => (
-            <CollectionShowcase collection={collection} key={collection.id} />
+          {liveCollections.map((collection, index) => (
+            <CollectionShowcase collection={collection} index={index} key={collection.id} />
           ))}
         </div>
       </section>
 
       <section className="featured section-shell" aria-labelledby="featured-title">
-        <div className="section-heading">
+        <div className="section-heading" data-reveal>
           <div>
-            <p className="eyebrow">Выбор мастерской</p>
+            <p className="eyebrow">03 / Выбор мастерской</p>
             <h2 id="featured-title">Предметы</h2>
           </div>
-          <Link className="text-link" href="/catalog">Весь каталог</Link>
+          <Link className="text-link" href="/catalog">Весь каталог <ArrowIcon className="arrow-icon" /></Link>
         </div>
         <div className="featured-grid">
           {liveFeatured.map((product, index) => (
@@ -138,14 +140,18 @@ export default function HomePage() {
 
       <section className="about" id="about" aria-labelledby="about-title">
         <div className="about-shell section-shell">
-          <p className="eyebrow">Мастерская</p>
-          <div className="about-grid">
+          <p className="eyebrow" data-reveal>04 / Мастерская</p>
+          <div className="about-grid" data-reveal>
             <h2 id="about-title">{text("about", "title", "JE TIKI создаёт украшения и небольшие объекты в Хабаровске.")}</h2>
             <div className="about-copy">
               <p>{text("about", "paragraph1", "Тёплые, тактильные вещи с локальным характером — для повседневной жизни, подарка и памяти о месте.")}</p>
               <p>{text("about", "paragraph2", "Кроме украшений мы создаём сувениры и небольшие серии для событий и бизнеса.")}</p>
               <Link className="text-link" href="/catalog">Смотреть все предметы</Link>
             </div>
+          </div>
+          <div className="atelier-detail" data-reveal>
+            <div className="atelier-image"><Image src={assetPath("/images/je-tiki/triangle-white-box.webp")} alt="Деревянное украшение JE TIKI в подарочной коробке" fill sizes="(max-width: 768px) 100vw, 45vw" /></div>
+            <p>У каждого дерева —<br /><span>свой почерк.</span><small>Мы сохраняем его в каждой вещи.</small></p>
           </div>
         </div>
       </section>

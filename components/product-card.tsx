@@ -20,12 +20,13 @@ export function ProductCard({
 }) {
   const { addItem } = useCart();
   const productHref = `/product?slug=${encodeURIComponent(product.slug)}`;
+  const hasAlternateImage = Boolean(product.images[1] && product.images[1] !== product.image);
   return (
-    <article className="product-card" aria-hidden={duplicate || undefined}>
+    <article className="product-card" data-reveal aria-hidden={duplicate || undefined}>
       <div className="product-media">
         <Link
           href={productHref}
-          className="product-image-link"
+          className={`product-image-link${hasAlternateImage ? " product-image-link--alternate" : ""}`}
           tabIndex={duplicate ? -1 : undefined}
           onMouseDown={duplicate ? (event) => event.preventDefault() : undefined}
         >
@@ -40,7 +41,7 @@ export function ProductCard({
                 sizes="(max-width: 720px) 50vw, (max-width: 1100px) 44vw, 32vw"
                 priority={priority}
               />
-              {product.images[1] && product.images[1] !== product.image && (
+              {hasAlternateImage && (
                 <Image
                   className="product-image product-image--secondary"
                   src={product.images[1]}
@@ -63,6 +64,7 @@ export function ProductCard({
           <h3>
             <Link
               href={productHref}
+              title={product.name}
               tabIndex={duplicate ? -1 : undefined}
               onMouseDown={duplicate ? (event) => event.preventDefault() : undefined}
             >

@@ -17,11 +17,13 @@ import { assetPath } from "@/lib/asset-path";
 import type { Product } from "@/lib/types";
 import { mapSupabaseProduct } from "@/lib/supabase-product";
 import { useModalFocus } from "@/lib/use-modal-focus";
+import { usePresence } from "@/lib/use-presence";
 
 export function CartDrawer() {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
   const { lines, isOpen, closeCart, updateQuantity, removeItem, clearCart, prepareCheckout } = useCart();
+  const present = usePresence(isOpen);
   const [checkout, setCheckout] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -32,7 +34,7 @@ export function CartDrawer() {
   const dialogRef = useRef<HTMLElement>(null);
   const checkoutRef = useRef<HTMLFormElement>(null);
 
-  useModalFocus({ active: isOpen, containerRef: dialogRef, onClose: closeCart });
+  useModalFocus({ active: present, containerRef: dialogRef, onClose: closeCart });
 
   const items = lines.flatMap((line) => {
     const product = catalogProducts.find((item) => item.slug === line.slug);
@@ -69,8 +71,8 @@ export function CartDrawer() {
   }, [supabase]);
 
   useEffect(() => {
-    if (!isOpen) { setCheckout(false); setSubmitError(""); }
-  }, [isOpen]);
+    if (!present) { setCheckout(false); setSubmitError(""); }
+  }, [present]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -83,7 +85,7 @@ export function CartDrawer() {
     return () => window.cancelAnimationFrame(frame);
   }, [checkout, isOpen]);
 
-  if (!isOpen) return null;
+  if (!present) return null;
 
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -142,7 +144,7 @@ export function CartDrawer() {
   }
 
   return (
-    <div className="drawer-backdrop" role="presentation" onMouseDown={closeCart}>
+    <div className="drawer-backdrop" data-state={isOpen ? "open" : "closing"} role="presentation" onMouseDown={closeCart}>
       <aside
         ref={dialogRef}
         tabIndex={-1}
