@@ -30,6 +30,8 @@ export function Header() {
     let startScale = 1;
     let endScale = 1;
     let startCenter = top;
+    let heroHeight = window.innerHeight;
+    let copyFadeDistance = 180;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const syncGeometry = () => {
@@ -38,6 +40,8 @@ export function Header() {
       mobile = width <= 768;
       top = mobile ? 32 : 36;
       const stableHeroHeight = hero?.offsetHeight || window.innerHeight;
+      heroHeight = stableHeroHeight;
+      copyFadeDistance = Math.min(220, Math.max(140, heroHeight * 0.26));
       range = Math.max(360, stableHeroHeight * 0.68);
       startScale = mobile
         ? Math.min(3.1, (width * 0.72) / 116)
@@ -67,11 +71,14 @@ export function Header() {
       header.classList.toggle("site-header--overlay", !solid);
 
       if (hero) {
-        const boundedScroll = Math.min(scrollPosition, hero.offsetHeight);
+        const boundedScroll = Math.min(scrollPosition, heroHeight);
         const parallax = reducedMotion.matches ? 0 : boundedScroll * (mobile ? 0.06 : 0.12);
-        const copyShift = reducedMotion.matches ? 0 : boundedScroll * -0.03;
+        const fade = Math.min(1, Math.max(0, (boundedScroll - 8) / copyFadeDistance));
+        const copyProgress = reducedMotion.matches ? 0 : fade * fade * (3 - 2 * fade);
         hero.style.setProperty("--hero-parallax-y", `${parallax}px`);
-        hero.style.setProperty("--hero-copy-shift", `${copyShift}px`);
+        hero.style.setProperty("--hero-copy-shift", `${-10 * copyProgress}px`);
+        hero.style.setProperty("--hero-copy-opacity", `${1 - copyProgress}`);
+        hero.style.setProperty("--hero-copy-pointer-events", copyProgress === 1 ? "none" : "auto");
       }
     };
 
@@ -92,7 +99,7 @@ export function Header() {
     };
 
     const requestUpdate = () => {
-      targetScroll = Math.min(hero?.offsetHeight || range, Math.max(0, window.scrollY));
+      targetScroll = Math.min(hero ? heroHeight : range, Math.max(0, window.scrollY));
       if (reducedMotion.matches) {
         renderedScroll = targetScroll;
         render(renderedScroll);

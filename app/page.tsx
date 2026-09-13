@@ -99,7 +99,7 @@ export default function HomePage() {
       </section>
 
       <section className="home-intro section-shell" aria-labelledby="home-intro-title">
-        <p className="eyebrow" data-reveal>01 / О JE TIKI</p>
+        <p className="eyebrow" data-reveal>О JE TIKI</p>
         <div className="home-intro-grid" data-reveal>
           <h2 id="home-intro-title">{text("home_intro", "title", "Современные предметы, в которых слышен Дальний Восток.")}</h2>
           <div>
@@ -112,9 +112,7 @@ export default function HomePage() {
 
       <section className="collection-stories" aria-labelledby="collections-title">
         <div className="collection-heading section-shell" data-reveal>
-          <p className="eyebrow">02 / Истории в дереве</p>
           <h2 id="collections-title">Коллекции</h2>
-          <span className="section-counter" aria-hidden="true">({String(liveCollections.length).padStart(2, "0")})</span>
         </div>
         <div className="collection-list">
           {liveCollections.map((collection, index) => (
@@ -126,7 +124,6 @@ export default function HomePage() {
       <section className="featured section-shell" aria-labelledby="featured-title">
         <div className="section-heading" data-reveal>
           <div>
-            <p className="eyebrow">03 / Выбор мастерской</p>
             <h2 id="featured-title">Предметы</h2>
           </div>
           <Link className="text-link" href="/catalog">Весь каталог <ArrowIcon className="arrow-icon" /></Link>
@@ -140,7 +137,7 @@ export default function HomePage() {
 
       <section className="about" id="about" aria-labelledby="about-title">
         <div className="about-shell section-shell">
-          <p className="eyebrow" data-reveal>04 / Мастерская</p>
+          <p className="eyebrow" data-reveal>Мастерская</p>
           <div className="about-grid" data-reveal>
             <h2 id="about-title">{text("about", "title", "JE TIKI создаёт украшения и небольшие объекты в Хабаровске.")}</h2>
             <div className="about-copy">
@@ -148,10 +145,6 @@ export default function HomePage() {
               <p>{text("about", "paragraph2", "Кроме украшений мы создаём сувениры и небольшие серии для событий и бизнеса.")}</p>
               <Link className="text-link" href="/catalog">Смотреть все предметы</Link>
             </div>
-          </div>
-          <div className="atelier-detail" data-reveal>
-            <div className="atelier-image"><Image src={assetPath("/images/je-tiki/triangle-white-box.webp")} alt="Деревянное украшение JE TIKI в подарочной коробке" fill sizes="(max-width: 768px) 100vw, 45vw" /></div>
-            <p>У каждого дерева —<br /><span>свой почерк.</span><small>Мы сохраняем его в каждой вещи.</small></p>
           </div>
         </div>
       </section>

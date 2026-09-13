@@ -22,7 +22,7 @@ export function ProductCard({
   const productHref = `/product?slug=${encodeURIComponent(product.slug)}`;
   const hasAlternateImage = Boolean(product.images[1] && product.images[1] !== product.image);
   return (
-    <article className="product-card" data-reveal aria-hidden={duplicate || undefined}>
+    <article className="product-card" aria-hidden={duplicate || undefined}>
       <div className="product-media">
         <Link
           href={productHref}
