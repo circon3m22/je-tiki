@@ -120,6 +120,7 @@ export function AdminPanel() {
     if (!supabase) { setError("Не настроено подключение к Supabase."); setAuthState("login"); return; }
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError?.name === "AuthSessionMissingError") { setAuthState("login"); return; }
       if (userError) throw userError;
       if (!user || user.is_anonymous) { setAuthState("login"); return; }
       const { data: profile, error: profileError } = await supabase.from("admin_profiles").select("user_id").eq("user_id", user.id).maybeSingle();
@@ -147,8 +148,19 @@ export function AdminPanel() {
     event.preventDefault(); if (!supabase) return;
     setBusy(true); setError(""); const form = new FormData(event.currentTarget);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email: String(form.get("email")), password: String(form.get("password")) });
-      if (signInError) { setError("Не удалось войти. Проверьте почту и пароль."); return; }
+      const login = String(form.get("login")).trim();
+      const password = String(form.get("password"));
+      if (login.includes("@")) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email: login, password });
+        if (signInError) { setError("Не удалось войти. Проверьте логин и пароль."); return; }
+      } else {
+        const { data, error: signInError } = await supabase.functions.invoke("admin-login", { body: { login, password } });
+        if (signInError || !data?.access_token || !data?.refresh_token) {
+          setError("Не удалось войти. Проверьте логин и пароль."); return;
+        }
+        const { error: sessionError } = await supabase.auth.setSession(data);
+        if (sessionError) { setError("Не удалось сохранить вход. Попробуйте ещё раз."); return; }
+      }
       await verifyAdmin();
     } catch {
       setError("Не удалось подключиться. Проверьте интернет и попробуйте ещё раз.");
@@ -205,7 +217,7 @@ export function AdminPanel() {
     <main id="main-content" className="admin-login section-shell">
       <p className="eyebrow">JE TIKI / Управление</p><h1>Вход в панель</h1>
       <form onSubmit={signIn}>
-        <label>Электронная почта<input required name="email" type="email" autoComplete="username" /></label>
+        <label>Логин<input required name="login" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} /></label>
         <label>Пароль<input required name="password" type="password" autoComplete="current-password" /></label>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-button" disabled={busy} type="submit">{busy ? "Входим…" : "Войти"}</button>

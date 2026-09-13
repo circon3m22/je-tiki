@@ -20,6 +20,8 @@ pnpm dev
 5. Заполните `NEXT_PUBLIC_SUPABASE_URL` и `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` в `.env.local`.
 6. Создайте пользователя-администратора и добавьте его UUID в таблицу `admin_profiles`.
 
+Вход в `/admin/` поддерживает логин `Jetiki` и прежний вход по почте. Разверните функцию `admin-login`: она сопоставляет логин с `adminUserId` существующего администратора и проверяет пароль через Supabase Auth. Для другого проекта укажите соответствующий UUID в функции. Пароль задаётся отдельно в Supabase Auth и не хранится в репозитории.
+
 В браузер передаётся только publishable key. Никогда не добавляйте secret key или `service_role` в переменные с префиксом `NEXT_PUBLIC_`.
 
 ## Развёртывание

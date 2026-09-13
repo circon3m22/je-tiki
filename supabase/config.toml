@@ -431,3 +431,10 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/admin-push/deno.json"
 entrypoint = "./functions/admin-push/index.ts"
+
+[functions.admin-login]
+enabled = true
+# This login endpoint authenticates the supplied password with Supabase Auth.
+verify_jwt = false
+import_map = "./functions/admin-login/deno.json"
+entrypoint = "./functions/admin-login/index.ts"
