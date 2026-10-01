@@ -21,10 +21,10 @@ export function Footer() {
         <p className="muted">{contacts.footer_text}</p>
         <a className="footer-region-mark" href="https://sdelanovkhv.ru/">
           <Image
-            src={assetPath("/made-in-khabarovsk-krai.svg")}
+            src={assetPath("/made-in-khabarovsk-krai-white.svg")}
             alt="Сделано в Хабаровском крае"
-            width={2047}
-            height={1354}
+            width={337}
+            height={223}
           />
         </a>
       </div>
