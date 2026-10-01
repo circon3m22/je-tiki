@@ -333,7 +333,7 @@ img { object-fit: cover; }
 }
 .footer-mark { width: fit-content; display: block; margin: 0 0 1.25rem; text-decoration: none; }
 .footer-mark img { display: block; width: clamp(8rem, 13vw, 12rem); height: auto; filter: invert(1); }
-.footer-region-mark { display: block; width: fit-content; max-width: 100%; margin-block-start: 1.75rem; padding: 0.75rem; background: #fff; }
+.footer-region-mark { display: block; width: fit-content; max-width: 100%; margin-block-start: 1.75rem; }
 .footer-region-mark img { display: block; width: 11rem; max-width: 100%; height: auto; }
 .muted { color: var(--ink-soft); }
 .site-footer .muted { color: oklch(0.8 0.006 87); }
