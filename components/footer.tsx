@@ -19,6 +19,14 @@ export function Footer() {
           <Image src={assetPath("/je-tiki-logo-v2.svg")} alt="" width={241} height={98} />
         </Link>
         <p className="muted">{contacts.footer_text}</p>
+        <a className="footer-region-mark" href="https://sdelanovkhv.ru/">
+          <Image
+            src={assetPath("/made-in-khabarovsk-krai.svg")}
+            alt="Сделано в Хабаровском крае"
+            width={2047}
+            height={1354}
+          />
+        </a>
       </div>
       <div className="footer-links" aria-label="Юридическая информация">
         <Link href="/legal/offer">Публичная оферта</Link>
