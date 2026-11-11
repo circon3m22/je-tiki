@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-11-11T10:42:29.252717+00:00",
+  "postgres_version": "17.11",
+  "isolated_restore": {
+    "target": "disposable Docker PostgreSQL, not the source Supabase project",
+    "live_column_types_and_constraints": true,
+    "product_collection_sync_trigger_enabled": true,
+    "all_five_tables_exact_jsonb_equality": true,
+    "refuses_nonempty_target": true
+  },
+  "assets": {
+    "storage_files_downloaded": 139,
+    "external_files_downloaded": 8,
+    "storage_sizes_and_single_part_etag_md5_verified": true
+  },
+  "production_database_modified": false
+}

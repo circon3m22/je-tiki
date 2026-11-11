@@ -1,0 +1,1204 @@
+{
+  "tables": [
+    {
+      "name": "public.categories",
+      "rls_enabled": true,
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "gen_random_uuid()"
+        },
+        {
+          "name": "slug",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable",
+            "unique"
+          ],
+          "check": "slug ~ '^[a-z0-9-]+$'::text"
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable"
+          ]
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "format": "int4",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "0"
+        },
+        {
+          "name": "published",
+          "data_type": "boolean",
+          "format": "bool",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "true"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "format": "timestamptz",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "format": "timestamptz",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "now()"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_key_constraints": [
+        {
+          "name": "products_category_id_fkey",
+          "source_table": "public.products",
+          "source_columns": [
+            "category_id"
+          ],
+          "target_table": "public.categories",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.collections",
+      "rls_enabled": true,
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "gen_random_uuid()"
+        },
+        {
+          "name": "slug",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable",
+            "unique"
+          ],
+          "check": "slug ~ '^[a-z0-9-]+$'::text"
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable"
+          ]
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "published",
+          "data_type": "boolean",
+          "format": "bool",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "false"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "format": "timestamptz",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "format": "timestamptz",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "now()"
+        },
+        {
+          "name": "hero_image_url",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "format": "int4",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "0"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_key_constraints": [
+        {
+          "name": "collection_products_collection_id_fkey",
+          "source_table": "public.collection_products",
+          "source_columns": [
+            "collection_id"
+          ],
+          "target_table": "public.collections",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "products_collection_id_fkey",
+          "source_table": "public.products",
+          "source_columns": [
+            "collection_id"
+          ],
+          "target_table": "public.collections",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.products",
+      "rls_enabled": true,
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "gen_random_uuid()"
+        },
+        {
+          "name": "slug",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable",
+            "unique"
+          ],
+          "check": "slug ~ '^[a-z0-9-]+$'::text"
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable"
+          ]
+        },
+        {
+          "name": "subtitle",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "''::text"
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "''::text"
+        },
+        {
+          "name": "price",
+          "data_type": "integer",
+          "format": "int4",
+          "options": [
+            "updatable"
+          ],
+          "check": "price >= 0"
+        },
+        {
+          "name": "old_price",
+          "data_type": "integer",
+          "format": "int4",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "orderable",
+          "data_type": "boolean",
+          "format": "bool",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "true"
+        },
+        {
+          "name": "status",
+          "data_type": "USER-DEFINED",
+          "format": "product_status",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "'draft'::product_status",
+          "enums": [
+            "draft",
+            "published",
+            "archived"
+          ]
+        },
+        {
+          "name": "featured",
+          "data_type": "boolean",
+          "format": "bool",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "false"
+        },
+        {
+          "name": "stock_quantity",
+          "data_type": "integer",
+          "format": "int4",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "0",
+          "check": "stock_quantity >= 0"
+        },
+        {
+          "name": "category_id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "material",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "wood_type",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "metal",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "metal_fineness",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "metal_weight",
+          "data_type": "numeric",
+          "format": "numeric",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "dimensions",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "weight",
+          "data_type": "numeric",
+          "format": "numeric",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "care",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "uin",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "giis_data",
+          "data_type": "jsonb",
+          "format": "jsonb",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "'{}'::jsonb"
+        },
+        {
+          "name": "certificate_url",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "declaration_url",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "seo_title",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "seo_description",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "format": "timestamptz",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "format": "timestamptz",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "now()"
+        },
+        {
+          "name": "collection_id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ]
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_key_constraints": [
+        {
+          "name": "products_category_id_fkey",
+          "source_table": "public.products",
+          "source_columns": [
+            "category_id"
+          ],
+          "target_table": "public.categories",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "collection_products_product_id_fkey",
+          "source_table": "public.collection_products",
+          "source_columns": [
+            "product_id"
+          ],
+          "target_table": "public.products",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "cart_items_product_slug_fkey",
+          "source_table": "public.cart_items",
+          "source_columns": [
+            "product_slug"
+          ],
+          "target_table": "public.products",
+          "target_columns": [
+            "slug"
+          ]
+        },
+        {
+          "name": "order_items_product_id_fkey",
+          "source_table": "public.order_items",
+          "source_columns": [
+            "product_id"
+          ],
+          "target_table": "public.products",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "products_collection_id_fkey",
+          "source_table": "public.products",
+          "source_columns": [
+            "collection_id"
+          ],
+          "target_table": "public.collections",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "product_images_product_id_fkey",
+          "source_table": "public.product_images",
+          "source_columns": [
+            "product_id"
+          ],
+          "target_table": "public.products",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.product_images",
+      "rls_enabled": true,
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "gen_random_uuid()"
+        },
+        {
+          "name": "product_id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ]
+        },
+        {
+          "name": "storage_path",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "external_url",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "nullable",
+            "updatable"
+          ]
+        },
+        {
+          "name": "alt_text",
+          "data_type": "text",
+          "format": "text",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "''::text"
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "format": "int4",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "0"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "format": "timestamptz",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "now()"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_key_constraints": [
+        {
+          "name": "product_images_product_id_fkey",
+          "source_table": "public.product_images",
+          "source_columns": [
+            "product_id"
+          ],
+          "target_table": "public.products",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.collection_products",
+      "rls_enabled": true,
+      "columns": [
+        {
+          "name": "collection_id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ]
+        },
+        {
+          "name": "product_id",
+          "data_type": "uuid",
+          "format": "uuid",
+          "options": [
+            "updatable"
+          ]
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "format": "int4",
+          "options": [
+            "updatable"
+          ],
+          "default_value": "0"
+        }
+      ],
+      "primary_keys": [
+        "collection_id",
+        "product_id"
+      ],
+      "foreign_key_constraints": [
+        {
+          "name": "collection_products_collection_id_fkey",
+          "source_table": "public.collection_products",
+          "source_columns": [
+            "collection_id"
+          ],
+          "target_table": "public.collections",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "collection_products_product_id_fkey",
+          "source_table": "public.collection_products",
+          "source_columns": [
+            "product_id"
+          ],
+          "target_table": "public.products",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ]
+    }
+  ],
+  "columns": [
+    {
+      "table_name": "categories",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": "gen_random_uuid()"
+    },
+    {
+      "table_name": "categories",
+      "column_name": "slug",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "categories",
+      "column_name": "name",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "categories",
+      "column_name": "sort_order",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "0"
+    },
+    {
+      "table_name": "categories",
+      "column_name": "published",
+      "data_type": "boolean",
+      "not_null": true,
+      "default_expression": "true"
+    },
+    {
+      "table_name": "categories",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "now()"
+    },
+    {
+      "table_name": "categories",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "now()"
+    },
+    {
+      "table_name": "collection_products",
+      "column_name": "collection_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "collection_products",
+      "column_name": "product_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "collection_products",
+      "column_name": "sort_order",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "0"
+    },
+    {
+      "table_name": "collections",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": "gen_random_uuid()"
+    },
+    {
+      "table_name": "collections",
+      "column_name": "slug",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "collections",
+      "column_name": "name",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "collections",
+      "column_name": "description",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "collections",
+      "column_name": "published",
+      "data_type": "boolean",
+      "not_null": true,
+      "default_expression": "false"
+    },
+    {
+      "table_name": "collections",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "now()"
+    },
+    {
+      "table_name": "collections",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "now()"
+    },
+    {
+      "table_name": "collections",
+      "column_name": "hero_image_url",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "collections",
+      "column_name": "sort_order",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "0"
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": "gen_random_uuid()"
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "product_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "storage_path",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "external_url",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "alt_text",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": "''::text"
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "sort_order",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "0"
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "now()"
+    },
+    {
+      "table_name": "products",
+      "column_name": "id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": "gen_random_uuid()"
+    },
+    {
+      "table_name": "products",
+      "column_name": "slug",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "name",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "subtitle",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": "''::text"
+    },
+    {
+      "table_name": "products",
+      "column_name": "description",
+      "data_type": "text",
+      "not_null": true,
+      "default_expression": "''::text"
+    },
+    {
+      "table_name": "products",
+      "column_name": "price",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "old_price",
+      "data_type": "integer",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "orderable",
+      "data_type": "boolean",
+      "not_null": true,
+      "default_expression": "true"
+    },
+    {
+      "table_name": "products",
+      "column_name": "status",
+      "data_type": "product_status",
+      "not_null": true,
+      "default_expression": "'draft'::product_status"
+    },
+    {
+      "table_name": "products",
+      "column_name": "featured",
+      "data_type": "boolean",
+      "not_null": true,
+      "default_expression": "false"
+    },
+    {
+      "table_name": "products",
+      "column_name": "stock_quantity",
+      "data_type": "integer",
+      "not_null": true,
+      "default_expression": "0"
+    },
+    {
+      "table_name": "products",
+      "column_name": "category_id",
+      "data_type": "uuid",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "material",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "wood_type",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "metal",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "metal_fineness",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "metal_weight",
+      "data_type": "numeric(10,3)",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "dimensions",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "weight",
+      "data_type": "numeric(10,3)",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "care",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "uin",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "giis_data",
+      "data_type": "jsonb",
+      "not_null": true,
+      "default_expression": "'{}'::jsonb"
+    },
+    {
+      "table_name": "products",
+      "column_name": "certificate_url",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "declaration_url",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "seo_title",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "seo_description",
+      "data_type": "text",
+      "not_null": false,
+      "default_expression": null
+    },
+    {
+      "table_name": "products",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "now()"
+    },
+    {
+      "table_name": "products",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "not_null": true,
+      "default_expression": "now()"
+    },
+    {
+      "table_name": "products",
+      "column_name": "collection_id",
+      "data_type": "uuid",
+      "not_null": true,
+      "default_expression": null
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "categories",
+      "conname": "categories_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "categories",
+      "conname": "categories_slug_check",
+      "contype": "c",
+      "definition": "CHECK (slug ~ '^[a-z0-9-]+$'::text)"
+    },
+    {
+      "table_name": "categories",
+      "conname": "categories_slug_key",
+      "contype": "u",
+      "definition": "UNIQUE (slug)"
+    },
+    {
+      "table_name": "collection_products",
+      "conname": "collection_products_collection_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "collection_products",
+      "conname": "collection_products_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (collection_id, product_id)"
+    },
+    {
+      "table_name": "collection_products",
+      "conname": "collection_products_product_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "collections",
+      "conname": "collections_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "collections",
+      "conname": "collections_slug_check",
+      "contype": "c",
+      "definition": "CHECK (slug ~ '^[a-z0-9-]+$'::text)"
+    },
+    {
+      "table_name": "collections",
+      "conname": "collections_slug_key",
+      "contype": "u",
+      "definition": "UNIQUE (slug)"
+    },
+    {
+      "table_name": "product_images",
+      "conname": "product_images_check",
+      "contype": "c",
+      "definition": "CHECK (num_nonnulls(storage_path, external_url) = 1)"
+    },
+    {
+      "table_name": "product_images",
+      "conname": "product_images_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "product_images",
+      "conname": "product_images_product_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "product_images",
+      "conname": "product_images_product_id_sort_order_key",
+      "contype": "u",
+      "definition": "UNIQUE (product_id, sort_order)"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_category_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_check",
+      "contype": "c",
+      "definition": "CHECK (old_price IS NULL OR old_price >= price)"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_collection_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE RESTRICT"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_price_check",
+      "contype": "c",
+      "definition": "CHECK (price >= 0)"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_slug_check",
+      "contype": "c",
+      "definition": "CHECK (slug ~ '^[a-z0-9-]+$'::text)"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_slug_key",
+      "contype": "u",
+      "definition": "UNIQUE (slug)"
+    },
+    {
+      "table_name": "products",
+      "conname": "products_stock_quantity_check",
+      "contype": "c",
+      "definition": "CHECK (stock_quantity >= 0)"
+    }
+  ]
+}
