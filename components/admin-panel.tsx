@@ -181,6 +181,36 @@ export function AdminPanel() {
     }
   }
 
+  async function replaceProductImage(image: ImageRow, file: File) {
+    if (!supabase || busy) return;
+    await run(async () => {
+      const optimized = await optimizeImage(file);
+      const safeName = optimized.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+      const path = `${image.product_id}/${crypto.randomUUID()}-${safeName}`;
+      const upload = await supabase.storage.from("product-media").upload(path, optimized, {
+        contentType: optimized.type,
+        cacheControl: "31536000",
+        upsert: false,
+      });
+      if (upload.error) return upload;
+
+      const update = supabase.from("product_images")
+        .update({ storage_path: path, external_url: null })
+        .eq("id", image.id);
+      const withStoragePath = image.storage_path === null
+        ? update.is("storage_path", null)
+        : update.eq("storage_path", image.storage_path);
+      const { data, error: updateError } = await (image.external_url === null
+        ? withStoragePath.is("external_url", null)
+        : withStoragePath.eq("external_url", image.external_url)).select("id").maybeSingle();
+      if (updateError) return { error: updateError };
+      if (!data) {
+        return { error: { message: "Фото уже изменилось или было удалено. Обновите данные и попробуйте снова." } };
+      }
+      return { error: null };
+    }, "Фотография заменена.");
+  }
+
   async function refreshData() {
     setBusy(true); setError(""); setMessage("");
     try {
@@ -282,7 +312,7 @@ export function AdminPanel() {
               if (insert.error) { setError(insert.error.message); setBusy(false); return; }
             }
             setMessage("Фотографии добавлены к товару."); await loadData(); setBusy(false);
-          }} onUpdateImage={async (image, patch) => run(() => supabase!.from("product_images").update(patch).eq("id", image.id), "Галерея обновлена.")} onDeleteImage={async (image) => run(async () => { if (image.storage_path) await supabase!.storage.from("product-media").remove([image.storage_path]); return supabase!.from("product_images").delete().eq("id", image.id); }, "Фотография удалена.")} />
+          }} onReplaceImage={replaceProductImage} onUpdateImage={async (image, patch) => run(() => supabase!.from("product_images").update(patch).eq("id", image.id), "Галерея обновлена.")} onDeleteImage={async (image) => run(async () => { if (image.storage_path) await supabase!.storage.from("product-media").remove([image.storage_path]); return supabase!.from("product_images").delete().eq("id", image.id); }, "Фотография удалена.")} />
         </section>}
 
         {section === "categories" && <section className="admin-section"><p className="admin-help">Категории управляют фильтрами каталога.</p><div className="admin-rows">
@@ -333,7 +363,7 @@ function OrderEditor({ value, onSave, busy }: { value: OrderRow; onSave: (order:
   </div></details>;
 }
 
-function ProductEditor({ editorRef, value, categories, collections, images, busy, onChange, onClose, onSave, onUpload, onUpdateImage, onDeleteImage }: { editorRef: RefObject<HTMLDivElement | null>; value: ProductRow | null; categories: CategoryRow[]; collections: CollectionRow[]; images: ImageRow[]; busy: boolean; onChange: (value: ProductRow) => void; onClose: () => void; onSave: (value: ProductRow) => Promise<void>; onUpload: (files: File[], productId: string) => Promise<void>; onUpdateImage: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>; onDeleteImage: (image: ImageRow) => Promise<void> }) {
+function ProductEditor({ editorRef, value, categories, collections, images, busy, onChange, onClose, onSave, onUpload, onReplaceImage, onUpdateImage, onDeleteImage }: { editorRef: RefObject<HTMLDivElement | null>; value: ProductRow | null; categories: CategoryRow[]; collections: CollectionRow[]; images: ImageRow[]; busy: boolean; onChange: (value: ProductRow) => void; onClose: () => void; onSave: (value: ProductRow) => Promise<void>; onUpload: (files: File[], productId: string) => Promise<void>; onReplaceImage: (image: ImageRow, file: File) => Promise<void>; onUpdateImage: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>; onDeleteImage: (image: ImageRow) => Promise<void> }) {
   if (!value) return <div className="admin-editor admin-product-editor admin-empty">Выберите товар слева.</div>;
   const set = <K extends keyof ProductRow>(key: K, next: ProductRow[K]) => onChange({ ...value, [key]: next });
   return <div ref={editorRef} tabIndex={-1} className="admin-editor admin-product-editor"><header className="admin-product-editor-header"><button data-modal-initial-focus type="button" className="admin-product-editor-back" onClick={onClose} aria-label="Вернуться к списку товаров">←</button><div><p>Редактор товара</p><h3>{value.id ? value.name : "Новый товар"}</h3></div></header><div className="admin-form-grid">
@@ -343,7 +373,7 @@ function ProductEditor({ editorRef, value, categories, collections, images, busy
     <Field label="Цена, ₽" type="number" value={String(value.price)} onChange={(v) => set("price", Number(v) || 1000)} /><Field label="Остаток" type="number" value={String(value.stock_quantity)} onChange={(v) => set("stock_quantity", Number(v) || 0)} />
     <Select label="Публикация" value={value.status} options={["draft","published","archived"]} onChange={(v) => set("status", v as ProductRow["status"])} /><Field label="Материал" value={value.material ?? ""} onChange={(v) => set("material", v)} />
     <Field label="Порода дерева" value={value.wood_type ?? ""} onChange={(v) => set("wood_type", v)} /><Field label="Металл" value={value.metal ?? ""} onChange={(v) => set("metal", v)} /><Field label="Размеры" value={value.dimensions ?? ""} onChange={(v) => set("dimensions", v)} />
-  </div><TextArea label="Описание" value={value.description ?? ""} onChange={(v) => set("description", v)} /><TextArea label="Уход" value={value.care ?? ""} onChange={(v) => set("care", v)} /><div className="admin-checks"><label><input type="checkbox" checked={value.orderable} onChange={(e) => set("orderable", e.target.checked)} /> Можно заказать</label><label><input type="checkbox" checked={value.featured} onChange={(e) => set("featured", e.target.checked)} /> На главной</label></div><ProductGallery product={value} images={images} busy={busy} onUpload={onUpload} onUpdate={onUpdateImage} onDelete={onDeleteImage} /><div className="admin-product-editor-savebar"><button className="primary-button" disabled={busy} onClick={() => void onSave(value)}>{busy ? "Сохраняем…" : "Сохранить товар"}</button></div></div>;
+  </div><TextArea label="Описание" value={value.description ?? ""} onChange={(v) => set("description", v)} /><TextArea label="Уход" value={value.care ?? ""} onChange={(v) => set("care", v)} /><div className="admin-checks"><label><input type="checkbox" checked={value.orderable} onChange={(e) => set("orderable", e.target.checked)} /> Можно заказать</label><label><input type="checkbox" checked={value.featured} onChange={(e) => set("featured", e.target.checked)} /> На главной</label></div><ProductGallery product={value} images={images} busy={busy} onUpload={onUpload} onReplace={onReplaceImage} onUpdate={onUpdateImage} onDelete={onDeleteImage} /><div className="admin-product-editor-savebar"><button className="primary-button" disabled={busy} onClick={() => void onSave(value)}>{busy ? "Сохраняем…" : "Сохранить товар"}</button></div></div>;
 }
 
 function CategoryEditor({ value, onSave, busy }: { value: CategoryRow; onSave: (value: CategoryRow) => Promise<void>; busy: boolean }) { const [row, setRow] = useState(value); useEffect(() => setRow(value), [value]); return <article className="admin-inline-editor"><div className="admin-form-grid"><Field label="Название" value={row.name} onChange={(name) => setRow({ ...row, name })} /><Field label="Slug" value={row.slug} onChange={(slug) => setRow({ ...row, slug })} /><Field label="Порядок" type="number" value={String(row.sort_order)} onChange={(v) => setRow({ ...row, sort_order: Number(v) || 0 })} /></div><label className="check"><input type="checkbox" checked={row.published} onChange={(e) => setRow({ ...row, published: e.target.checked })} /> Опубликована</label><button className="secondary-button" disabled={busy} onClick={() => void onSave(row)}>Сохранить</button></article>; }
@@ -353,7 +383,7 @@ function ContentEditor({ contentKey, value, onSave, busy }: { contentKey: string
 
 function contentBlockTitle(key: string) { return ({ hero: "Первый экран", home_intro: "Вступление о бренде", about: "О мастерской", contacts: "Контакты и подвал" } as Record<string, string>)[key] ?? key; }
 function DocumentEditor({ value, onSave, busy }: { value: DocumentRow; onSave: (value: DocumentRow) => Promise<void>; busy: boolean }) { const [row, setRow] = useState(value); useEffect(() => setRow(value), [value]); return <article className="admin-inline-editor"><p className="eyebrow">/{row.slug}</p><Field label="Заголовок" value={row.title} onChange={(title) => setRow({ ...row, title })} /><TextArea label="Текст документа" rows={14} value={row.body ?? ""} onChange={(body) => setRow({ ...row, body })} /><label className="check"><input type="checkbox" checked={row.published} onChange={(e) => setRow({ ...row, published: e.target.checked })} /> Опубликован</label><button className="secondary-button" disabled={busy} onClick={() => void onSave(row)}>Сохранить документ</button></article>; }
-function ProductGallery({ product, images, busy, onUpload, onUpdate, onDelete }: { product: ProductRow; images: ImageRow[]; busy: boolean; onUpload: (files: File[], productId: string) => Promise<void>; onUpdate: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>; onDelete: (image: ImageRow) => Promise<void> }) {
+function ProductGallery({ product, images, busy, onUpload, onReplace, onUpdate, onDelete }: { product: ProductRow; images: ImageRow[]; busy: boolean; onUpload: (files: File[], productId: string) => Promise<void>; onReplace: (image: ImageRow, file: File) => Promise<void>; onUpdate: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>; onDelete: (image: ImageRow) => Promise<void> }) {
   const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
   const publicBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/product-media/`;
   const move = async (image: ImageRow, direction: -1 | 1) => {
@@ -363,7 +393,36 @@ function ProductGallery({ product, images, busy, onUpload, onUpdate, onDelete }:
   return <section className="product-gallery-editor" aria-labelledby="product-gallery-title"><div className="product-gallery-heading"><div><h4 id="product-gallery-title">Фотографии товара</h4><p>{images.length} из 10 · №1 — обложка, №2 — white box при наведении</p></div><label className={`secondary-button gallery-upload ${!product.id || images.length >= 10 ? "disabled" : ""}`}>Добавить фото<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" disabled={!product.id || busy || images.length >= 10} onChange={(event) => { const files = Array.from(event.target.files ?? []).slice(0, 10 - images.length); if (files.length) void onUpload(files, product.id); event.target.value = ""; }} /></label></div>
     {!product.id && <p className="admin-empty">Сначала сохраните новый товар.</p>}
     {product.id && !images.length && <p className="admin-empty">Фотографий пока нет. Можно загрузить до 10 изображений.</p>}
-    <div className="product-gallery-grid">{sorted.map((image, index) => { const src = image.external_url || (image.storage_path ? `${publicBase}${image.storage_path}` : ""); return <article key={image.id}><div className="gallery-editor-preview"><img src={src} alt={image.alt_text || `Фото ${index + 1}`} loading="lazy" decoding="async" />{index < 2 && <span>{index === 0 ? "Обложка" : "При наведении"}</span>}</div><input aria-label={`Описание фотографии ${index + 1}`} defaultValue={image.alt_text} onBlur={(event) => { if (event.target.value !== image.alt_text) void onUpdate(image, { alt_text: event.target.value }); }} /><div className="gallery-editor-actions"><button type="button" disabled={busy || index === 0} aria-label="Переместить фото раньше" onClick={() => void move(image, -1)}>←</button><button type="button" disabled={busy || index === sorted.length - 1} aria-label="Переместить фото позже" onClick={() => void move(image, 1)}>→</button><button type="button" className="danger" disabled={busy} onClick={() => void onDelete(image)}>Удалить</button></div></article>; })}</div>
+    <div className="product-gallery-grid">
+      {sorted.map((image, index) => {
+        const src = image.external_url || (image.storage_path ? `${publicBase}${image.storage_path}` : "");
+        const title = index === 0 ? "Обложка" : index === 1 ? "При наведении" : `Фото ${index + 1}`;
+        return <article key={image.id}>
+          <div className="gallery-editor-preview">
+            <img src={src} alt={image.alt_text || `Фото ${index + 1}`} loading="lazy" decoding="async" />
+            {index < 2 && <span>{title}</span>}
+          </div>
+          <input aria-label={`Описание фотографии ${index + 1}`} defaultValue={image.alt_text} onBlur={(event) => {
+            if (event.target.value !== image.alt_text) void onUpdate(image, { alt_text: event.target.value });
+          }} />
+          <label className={`secondary-button gallery-upload mt-2 w-full focus-within:outline ${busy ? "disabled" : ""}`}>
+            Заменить
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy}
+              aria-label={index === 0 ? "Заменить обложку" : `Заменить фото ${index + 1}`}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                if (file) void onReplace(image, file);
+              }} />
+          </label>
+          <div className="gallery-editor-actions">
+            <button type="button" disabled={busy || index === 0} aria-label="Переместить фото раньше" onClick={() => void move(image, -1)}>←</button>
+            <button type="button" disabled={busy || index === sorted.length - 1} aria-label="Переместить фото позже" onClick={() => void move(image, 1)}>→</button>
+            <button type="button" className="danger" disabled={busy} onClick={() => void onDelete(image)}>Удалить</button>
+          </div>
+        </article>;
+      })}
+    </div>
   </section>;
 }
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { return <label>{label}<input type={type} value={value} onChange={(e) => onChange(e.target.value)} /></label>; }
