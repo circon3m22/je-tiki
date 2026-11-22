@@ -99,12 +99,11 @@ export default function HomePage() {
       </section>
 
       <section className="home-intro section-shell" aria-labelledby="home-intro-title">
-        <p className="eyebrow" data-reveal>О JE TIKI</p>
         <div className="home-intro-grid" data-reveal>
           <h2 id="home-intro-title">{text("home_intro", "title", "Современные предметы, в которых слышен Дальний Восток.")}</h2>
           <div>
-            <p>{text("home_intro", "paragraph1", "Мы работаем с японским вязом и другими дальневосточными породами. Сохраняем рисунок дерева — он делает каждую вещь единственной.")}</p>
-            <p>{text("home_intro", "paragraph2", "Источники форм — нанайский орнамент, природа Приамурья и простая геометрия.")}</p>
+            <p>{text("home_intro", "paragraph1", "Мы работаем с японским вязом и другими дальневосточными породами и сохраняем рисунок дерева.")}</p>
+            <p>{text("home_intro", "paragraph2", "В формах украшений мы используем нанайский орнамент, природные мотивы Приамурья и простую геометрию.")}</p>
             <Link className="text-link" href="#about">Знакомство с мастерской <ArrowIcon className="arrow-icon" /></Link>
           </div>
         </div>
@@ -137,7 +136,6 @@ export default function HomePage() {
 
       <section className="about" id="about" aria-labelledby="about-title">
         <div className="about-shell section-shell">
-          <p className="eyebrow" data-reveal>Мастерская</p>
           <div className="about-grid" data-reveal>
             <h2 id="about-title">{text("about", "title", "JE TIKI создаёт украшения и небольшие объекты в Хабаровске.")}</h2>
             <div className="about-copy">

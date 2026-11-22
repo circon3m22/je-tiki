@@ -27,7 +27,6 @@ export default async function LegalPage({ params }: { params: Promise<{ document
   if (!title) notFound();
   return (
     <main id="main-content" className="legal-page section-shell">
-      <p className="eyebrow">Юридическая информация</p>
       <LegalDocument slug={document} fallbackTitle={title} />
     </main>
   );

@@ -130,8 +130,8 @@ export function CartDrawer() {
         code === "empty_cart" || code === "stock_changed"
           ? "Состав корзины изменился. Вернитесь в корзину, проверьте товары и попробуйте ещё раз."
           : code === "legal_documents_unavailable"
-            ? "Оформление временно недоступно. Попробуйте позже — товары в корзине сохранены."
-          : "Не удалось подготовить заказ. Попробуйте ещё раз — товары в корзине сохранены.",
+            ? "Оформление временно недоступно. Товары остались в корзине. Попробуйте позже."
+          : "Не удалось подготовить заказ. Товары остались в корзине. Попробуйте ещё раз.",
       );
       return;
     }
@@ -155,10 +155,7 @@ export function CartDrawer() {
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="drawer-header">
-          <div>
-            <p className="eyebrow">{checkout ? "Оформление" : "Ваш выбор"}</p>
-            <h2 id="cart-title">{checkout ? "Контакты и доставка" : "Корзина"}</h2>
-          </div>
+          <h2 id="cart-title">{checkout ? "Контакты и доставка" : "Корзина"}</h2>
           <button ref={closeRef} data-modal-initial-focus className="icon-button" type="button" onClick={closeCart} aria-label="Закрыть корзину">
             <CloseIcon className="icon" />
           </button>
@@ -172,7 +169,6 @@ export function CartDrawer() {
               ) : lines.length === 0 ? (
                 <div className="empty-cart">
                   <p className="empty-title">В корзине пока пусто</p>
-                  <p>Выберите украшение в каталоге — оно останется здесь, даже если вы закроете сайт.</p>
                   <button className="text-link" type="button" onClick={() => { closeCart(); router.push("/catalog"); }}>
                     Перейти в каталог
                   </button>

@@ -245,7 +245,7 @@ export function AdminPanel() {
   if (authState === "loading") return <main id="main-content" className="admin-loading"><p>Загружаем панель управления…</p></main>;
   if (authState === "login") return (
     <main id="main-content" className="admin-login section-shell">
-      <p className="eyebrow">JE TIKI / Управление</p><h1>Вход в панель</h1>
+      <h1>Вход в панель JE TIKI</h1>
       <form onSubmit={signIn}>
         <label>Логин<input required name="login" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} /></label>
         <label>Пароль<input required name="password" type="password" autoComplete="current-password" /></label>
@@ -263,7 +263,7 @@ export function AdminPanel() {
         <button className="admin-signout" onClick={async () => { await supabase?.auth.signOut(); setAuthState("login"); }}>Выйти</button>
       </aside>
       <div className="admin-workspace">
-        <header className="admin-toolbar"><div><p className="eyebrow">Панель магазина</p><h2>{nav.find((item) => item.id === section)?.label}</h2></div><button className="secondary-button" disabled={busy} onClick={() => void refreshData()}>Обновить</button></header>
+        <header className="admin-toolbar"><h2>{nav.find((item) => item.id === section)?.label}</h2><button className="secondary-button" disabled={busy} onClick={() => void refreshData()}>Обновить</button></header>
         {(message || error) && <div className={error ? "admin-alert error" : "admin-alert"} role={error ? "alert" : "status"}>{error || message}</div>}
 
         {section === "dashboard" && <section className="admin-section">
@@ -279,7 +279,6 @@ export function AdminPanel() {
         </section>}
 
         {section === "orders" && <section className="admin-section">
-          <p className="admin-help">Здесь отображаются все заказы с сайта. Меняйте этап, оплату, доставку и трек-номер — данные сохраняются в Supabase.</p>
           <OrderList orders={orders} onSave={async (order) => run(() => supabase!.from("orders").update({ status: order.status, payment_status: order.payment_status, shipping_status: order.shipping_status, tracking_number: order.tracking_number, tracking_url: order.tracking_url }).eq("id", order.id), "Заказ обновлён.")} busy={busy} />
         </section>}
 
@@ -315,12 +314,12 @@ export function AdminPanel() {
           }} onReplaceImage={replaceProductImage} onUpdateImage={async (image, patch) => run(() => supabase!.from("product_images").update(patch).eq("id", image.id), "Галерея обновлена.")} onDeleteImage={async (image) => run(async () => { if (image.storage_path) await supabase!.storage.from("product-media").remove([image.storage_path]); return supabase!.from("product_images").delete().eq("id", image.id); }, "Фотография удалена.")} />
         </section>}
 
-        {section === "categories" && <section className="admin-section"><p className="admin-help">Категории управляют фильтрами каталога.</p><div className="admin-rows">
+        {section === "categories" && <section className="admin-section"><div className="admin-rows">
           {categories.map((category) => <CategoryEditor key={category.id} value={category} busy={busy} onSave={(value) => run(() => supabase!.from("categories").update(value).eq("id", value.id), "Категория сохранена.")} />)}
           <CategoryEditor value={{ id: "", slug: "new-category", name: "Новая категория", sort_order: categories.length * 10 + 10, published: false }} busy={busy} onSave={(value) => run(() => supabase!.from("categories").insert({ slug: value.slug, name: value.name, sort_order: value.sort_order, published: value.published }), "Категория создана.")} />
         </div></section>}
 
-        {section === "collections" && <section className="admin-section"><p className="admin-help">У каждой коллекции есть широкая обложка и собственные товары. Принадлежность товара меняется в редакторе товара — оставить товар без коллекции нельзя.</p><div className="admin-rows">
+        {section === "collections" && <section className="admin-section"><p className="admin-help">Каждому товару нужна коллекция. Её можно изменить в карточке товара.</p><div className="admin-rows">
           {[...collections, { id: "", slug: "new-collection", name: "Новая коллекция", description: "", hero_image_url: null, sort_order: collections.length * 10 + 10, published: false }].map((collection, index) => <CollectionEditor key={collection.id || `new-${index}`} value={collection} products={products} busy={busy} onSave={async (value) => {
             const payload = { slug: value.slug, name: value.name, description: value.description, hero_image_url: value.hero_image_url || null, sort_order: value.sort_order, published: value.published };
             if (value.id) await run(() => supabase!.from("collections").update(payload).eq("id", value.id), "Коллекция сохранена.");
@@ -338,11 +337,11 @@ export function AdminPanel() {
           }} />)}
         </div></section>}
 
-        {section === "content" && <section className="admin-section"><p className="admin-help">Редактируйте только видимый текст. Системные названия полей и структура блока защищены и сохраняются автоматически.</p><div className="admin-rows">
+        {section === "content" && <section className="admin-section"><div className="admin-rows">
           {Object.entries(contentTemplates).map(([key, template]) => <ContentEditor key={key} contentKey={key} value={content.find((item) => item.key === key) ?? { key, content: template, published: true }} busy={busy} onSave={(value) => run(() => supabase!.from("site_content").upsert(value, { onConflict: "key" }), "Блок сайта сохранён и уже доступен витрине.")} />)}
         </div></section>}
 
-        {section === "documents" && <section className="admin-section"><p className="admin-help">Здесь можно обновить текст документа или временно снять его с публикации. После изменения проверьте документ целиком.</p><div className="admin-rows">{documents.map((document) => <DocumentEditor key={document.slug} value={document} busy={busy} onSave={(value) => run(() => supabase!.from("legal_documents").update({ title: value.title, body: value.body, published: value.published }).eq("slug", value.slug), "Документ сохранён.")} />)}</div></section>}
+        {section === "documents" && <section className="admin-section"><div className="admin-rows">{documents.map((document) => <DocumentEditor key={document.slug} value={document} busy={busy} onSave={(value) => run(() => supabase!.from("legal_documents").update({ title: value.title, body: value.body, published: value.published }).eq("slug", value.slug), "Документ сохранён.")} />)}</div></section>}
 
       </div>
     </main>
@@ -384,15 +383,25 @@ function ContentEditor({ contentKey, value, onSave, busy }: { contentKey: string
 function contentBlockTitle(key: string) { return ({ hero: "Первый экран", home_intro: "Вступление о бренде", about: "О мастерской", contacts: "Контакты и подвал" } as Record<string, string>)[key] ?? key; }
 function DocumentEditor({ value, onSave, busy }: { value: DocumentRow; onSave: (value: DocumentRow) => Promise<void>; busy: boolean }) { const [row, setRow] = useState(value); useEffect(() => setRow(value), [value]); return <article className="admin-inline-editor"><p className="eyebrow">/{row.slug}</p><Field label="Заголовок" value={row.title} onChange={(title) => setRow({ ...row, title })} /><TextArea label="Текст документа" rows={14} value={row.body ?? ""} onChange={(body) => setRow({ ...row, body })} /><label className="check"><input type="checkbox" checked={row.published} onChange={(e) => setRow({ ...row, published: e.target.checked })} /> Опубликован</label><button className="secondary-button" disabled={busy} onClick={() => void onSave(row)}>Сохранить документ</button></article>; }
 function ProductGallery({ product, images, busy, onUpload, onReplace, onUpdate, onDelete }: { product: ProductRow; images: ImageRow[]; busy: boolean; onUpload: (files: File[], productId: string) => Promise<void>; onReplace: (image: ImageRow, file: File) => Promise<void>; onUpdate: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>; onDelete: (image: ImageRow) => Promise<void> }) {
+  const replacementInput = useRef<HTMLInputElement>(null);
+  const replacementImage = useRef<ImageRow | null>(null);
   const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
   const publicBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/product-media/`;
   const move = async (image: ImageRow, direction: -1 | 1) => {
     const index = sorted.findIndex((item) => item.id === image.id); const target = sorted[index + direction]; if (!target) return;
     await Promise.all([onUpdate(image, { sort_order: target.sort_order }), onUpdate(target, { sort_order: image.sort_order })]);
   };
-  return <section className="product-gallery-editor" aria-labelledby="product-gallery-title"><div className="product-gallery-heading"><div><h4 id="product-gallery-title">Фотографии товара</h4><p>{images.length} из 10 · №1 — обложка, №2 — white box при наведении</p></div><label className={`secondary-button gallery-upload ${!product.id || images.length >= 10 ? "disabled" : ""}`}>Добавить фото<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" disabled={!product.id || busy || images.length >= 10} onChange={(event) => { const files = Array.from(event.target.files ?? []).slice(0, 10 - images.length); if (files.length) void onUpload(files, product.id); event.target.value = ""; }} /></label></div>
+  return <section className="product-gallery-editor" aria-labelledby="product-gallery-title"><div className="product-gallery-heading"><div><h4 id="product-gallery-title">Фотографии товара</h4><p>{images.length} из 10</p></div><label className={`secondary-button gallery-upload ${!product.id || images.length >= 10 ? "disabled" : ""}`}>Добавить фото<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" disabled={!product.id || busy || images.length >= 10} onChange={(event) => { const files = Array.from(event.target.files ?? []).slice(0, 10 - images.length); if (files.length) void onUpload(files, product.id); event.target.value = ""; }} /></label></div>
     {!product.id && <p className="admin-empty">Сначала сохраните новый товар.</p>}
-    {product.id && !images.length && <p className="admin-empty">Фотографий пока нет. Можно загрузить до 10 изображений.</p>}
+    {product.id && !images.length && <p className="admin-empty">Фотографий пока нет.</p>}
+    <input ref={replacementInput} type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden disabled={busy}
+      onChange={(event) => {
+        const file = event.currentTarget.files?.[0];
+        const image = replacementImage.current;
+        event.currentTarget.value = "";
+        replacementImage.current = null;
+        if (file && image?.product_id === product.id) void onReplace(image, file);
+      }} />
     <div className="product-gallery-grid">
       {sorted.map((image, index) => {
         const src = image.external_url || (image.storage_path ? `${publicBase}${image.storage_path}` : "");
@@ -405,20 +414,15 @@ function ProductGallery({ product, images, busy, onUpload, onReplace, onUpdate, 
           <input aria-label={`Описание фотографии ${index + 1}`} defaultValue={image.alt_text} onBlur={(event) => {
             if (event.target.value !== image.alt_text) void onUpdate(image, { alt_text: event.target.value });
           }} />
-          <label className={`secondary-button gallery-upload mt-2 w-full focus-within:outline ${busy ? "disabled" : ""}`}>
-            Заменить
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy}
-              aria-label={index === 0 ? "Заменить обложку" : `Заменить фото ${index + 1}`}
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = "";
-                if (file) void onReplace(image, file);
-              }} />
-          </label>
           <div className="gallery-editor-actions">
             <button type="button" disabled={busy || index === 0} aria-label="Переместить фото раньше" onClick={() => void move(image, -1)}>←</button>
             <button type="button" disabled={busy || index === sorted.length - 1} aria-label="Переместить фото позже" onClick={() => void move(image, 1)}>→</button>
-            <button type="button" className="danger" disabled={busy} onClick={() => void onDelete(image)}>Удалить</button>
+            <button type="button" disabled={busy} onClick={() => void onDelete(image)}>Удалить</button>
+            <button type="button" disabled={busy} aria-label={index === 0 ? "Изменить обложку" : `Изменить фото ${index + 1}`}
+              onClick={() => {
+                replacementImage.current = image;
+                replacementInput.current?.click();
+              }}>Изменить</button>
           </div>
         </article>;
       })}

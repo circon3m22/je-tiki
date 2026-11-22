@@ -81,11 +81,7 @@ function CatalogContent() {
   return (
     <>
       <div className="catalog-heading">
-        <div>
-          <p className="eyebrow">JE TIKI / Предметы с историей</p>
-          <h1>Каталог</h1>
-        </div>
-        <p className="catalog-intro">Дальневосточное дерево, природные формы<br />и немного личного смысла.</p>
+        <h1>Каталог</h1>
       </div>
       {collection && <div className="catalog-collection"><span>{collection}</span><Link href="/catalog" aria-label="Сбросить фильтр коллекции">Все коллекции <span aria-hidden="true">×</span></Link></div>}
 
@@ -116,9 +112,9 @@ function CatalogContent() {
       <p className="sr-only" role="status">
         {refreshing && catalogProducts.length === 0
           ? "Загружаем актуальный каталог."
-          : `${refreshing ? "Обновляем каталог. " : ""}Показано украшений: ${filtered.length}.${loadFailed ? " Не удалось обновить данные — показан сохранённый каталог." : ""}`}
+          : `${refreshing ? "Обновляем каталог. " : ""}Показано предметов: ${filtered.length}.${loadFailed ? " Не удалось обновить каталог. Показана сохранённая версия." : ""}`}
       </p>
-      <div className="catalog-result-note"><span>{refreshing ? "Обновляем каталог…" : `Предметов: ${filtered.length}`}</span><span>Создано в Хабаровске</span></div>
+      <p className="catalog-result-note">{refreshing ? "Обновляем каталог…" : `Предметов: ${filtered.length}`}</p>
       {loadFailed && <p className="catalog-load-note">Не удалось обновить каталог. Показана сохранённая версия.</p>}
       {refreshing && catalogProducts.length === 0 ? (
         <div className="catalog-loading" aria-hidden="true">Загружаем актуальный каталог…</div>
