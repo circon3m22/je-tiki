@@ -8,6 +8,7 @@ import { products } from "@/lib/products";
 import type { Category } from "@/lib/types";
 import type { Product } from "@/lib/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { storefrontStorageKey } from "@/lib/site-content";
 import { mapSupabaseProduct } from "@/lib/supabase-product";
 
 const filters: Array<"Все" | Category> = [
@@ -49,33 +50,40 @@ function CatalogContent() {
   );
 
   useEffect(() => {
-    if (cachedCatalogProducts) {
-      setCatalogProducts(cachedCatalogProducts);
-      setRefreshing(false);
-      return;
-    }
     const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
-      setCatalogProducts(products);
-      setRefreshing(false);
-      return;
-    }
+    if (!supabase) return;
+
+    const client = supabase;
     let active = true;
-    setRefreshing(true);
-    void (async () => {
-      const { data, error } = await supabase.from("products").select("slug,name,subtitle,description,price,orderable,stock_quantity,material,wood_type,metal,dimensions,care,categories(name),collections:collections!products_collection_id_fkey(slug,name),product_images(storage_path,external_url,sort_order)").eq("status", "published");
-      if (!active) return;
+    let request = 0;
+    async function refresh() {
+      const current = ++request;
+      setRefreshing(true);
+      const { data, error } = await client.from("products").select("slug,name,subtitle,description,price,orderable,stock_quantity,material,wood_type,metal,dimensions,care,categories(name),collections:collections!products_collection_id_fkey(slug,name),product_images(storage_path,external_url,sort_order)").eq("status", "published");
+      if (!active || current !== request) return;
       if (!error && data) {
         const mappedProducts = data.map((row) => mapSupabaseProduct(row, products.find((item) => item.slug === row.slug)));
         cachedCatalogProducts = mappedProducts;
         setCatalogProducts(mappedProducts);
-      } else if (error) {
-        setCatalogProducts(products);
+        setLoadFailed(false);
+      } else {
         setLoadFailed(true);
       }
       setRefreshing(false);
-    })();
-    return () => { active = false; };
+    }
+
+    function onStorage(event: StorageEvent) {
+      if (event.key === storefrontStorageKey) void refresh();
+    }
+
+    void refresh();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   return (
@@ -112,13 +120,13 @@ function CatalogContent() {
       <p className="sr-only" role="status">
         {refreshing && catalogProducts.length === 0
           ? "Загружаем актуальный каталог."
-          : `${refreshing ? "Обновляем каталог. " : ""}Показано предметов: ${filtered.length}.${loadFailed ? " Не удалось обновить каталог. Показана сохранённая версия." : ""}`}
+          : `${refreshing ? "Обновляем каталог. " : ""}Показано предметов: ${filtered.length}.${loadFailed ? " Не удалось обновить каталог." : ""}`}
       </p>
       <p className="catalog-result-note">{refreshing ? "Обновляем каталог…" : `Предметов: ${filtered.length}`}</p>
-      {loadFailed && <p className="catalog-load-note">Не удалось обновить каталог. Показана сохранённая версия.</p>}
+      {loadFailed && <p className="catalog-load-note">Не удалось обновить каталог.</p>}
       {refreshing && catalogProducts.length === 0 ? (
         <div className="catalog-loading" aria-hidden="true">Загружаем актуальный каталог…</div>
-      ) : filtered.length === 0 ? (
+      ) : loadFailed && catalogProducts.length === 0 ? null : filtered.length === 0 ? (
         <div className="catalog-empty">
           <p>В этой категории пока нет товаров.</p>
           <Link className="text-link" href="/catalog" onClick={() => setCategory("Все")}>Показать весь каталог</Link>

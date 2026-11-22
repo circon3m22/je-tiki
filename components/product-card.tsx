@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/components/cart-provider";
+import { productHref } from "@/lib/product-link";
 import { formatPrice } from "@/lib/money";
 import { assetPath } from "@/lib/asset-path";
 import type { Product } from "@/lib/types";
@@ -19,13 +20,13 @@ export function ProductCard({
   duplicate?: boolean;
 }) {
   const { addItem } = useCart();
-  const productHref = `/product?slug=${encodeURIComponent(product.slug)}`;
+  const href = productHref(product.slug);
   const hasAlternateImage = Boolean(product.images[1] && product.images[1] !== product.image);
   return (
     <article className="product-card" aria-hidden={duplicate || undefined}>
       <div className="product-media">
         <Link
-          href={productHref}
+          href={href}
           className={`product-image-link${hasAlternateImage ? " product-image-link--alternate" : ""}`}
           tabIndex={duplicate ? -1 : undefined}
           onMouseDown={duplicate ? (event) => event.preventDefault() : undefined}
@@ -36,7 +37,7 @@ export function ProductCard({
               <Image
                 className="product-image product-image--primary"
                 src={product.image}
-                alt={`${product.name}, ${product.subtitle.toLowerCase()}`}
+                alt={product.name}
                 fill
                 sizes="(max-width: 720px) 50vw, (max-width: 1100px) 44vw, 32vw"
                 priority={priority}
@@ -63,7 +64,7 @@ export function ProductCard({
         <div>
           <h3>
             <Link
-              href={productHref}
+              href={href}
               title={product.name}
               tabIndex={duplicate ? -1 : undefined}
               onMouseDown={duplicate ? (event) => event.preventDefault() : undefined}
@@ -71,7 +72,7 @@ export function ProductCard({
               {product.name}
             </Link>
           </h3>
-          <p>{product.subtitle}</p>
+          {product.subtitle && <p>{product.subtitle}</p>}
         </div>
         <div className="product-actions">
           {quickAdd && (

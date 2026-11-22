@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 import { useCart } from "@/components/cart-provider";
+import { useSiteContent } from "@/components/site-content-provider";
 import { BrandLogo } from "@/components/brand-logo";
 
 export function Header() {
   const pathname = usePathname();
   const { count, openCart } = useCart();
-  const isHome = pathname === "/";
+  const hero = useSiteContent("hero");
+  const isHome = pathname === "/" && Boolean(hero);
   const headerRef = useRef<HTMLElement>(null);
   const logoRef = useRef<HTMLAnchorElement>(null);
 

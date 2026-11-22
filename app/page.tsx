@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowIcon } from "@/components/icons";
 import { CollectionShowcase, type HomeCollection } from "@/components/collection-showcase";
+import { useSiteContent } from "@/components/site-content-provider";
 import { ProductCard } from "@/components/product-card";
 import { heroImage, products, silverImage, woodImage } from "@/lib/products";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -43,18 +44,18 @@ const collectionFallbacks: HomeCollection[] = [
 const featuredFallbacks = products.filter((product) => product.orderable).slice(0, 5);
 
 export default function HomePage() {
-  const [blocks, setBlocks] = useState<Record<string, Record<string, unknown>>>({});
+  const hero = useSiteContent("hero");
+  const intro = useSiteContent("home_intro");
+  const about = useSiteContent("about");
   const [liveCollections, setLiveCollections] = useState<HomeCollection[]>(collectionFallbacks);
   const [liveFeatured, setLiveFeatured] = useState<ReturnType<typeof mapSupabaseProduct>[]>(featuredFallbacks);
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
     void Promise.all([
-      supabase.from("site_content").select("key,content").eq("published", true),
       supabase.from("collections").select("id,slug,name,description,hero_image_url,sort_order").eq("published", true).order("sort_order"),
       supabase.from("products").select("slug,name,subtitle,description,price,orderable,featured,stock_quantity,material,wood_type,metal,dimensions,care,collection_id,categories(name),collections:collections!products_collection_id_fkey(slug,name),product_images(storage_path,external_url,sort_order)").eq("status", "published"),
-    ]).then(([contentResult, collectionResult, productResult]) => {
-      if (contentResult.data) setBlocks(Object.fromEntries(contentResult.data.map((row) => [row.key, row.content as Record<string, unknown>])));
+    ]).then(([collectionResult, productResult]) => {
       const mappedProducts = (productResult.data ?? []).map((row) => ({
         collectionId: row.collection_id,
         featured: row.featured,
@@ -76,10 +77,9 @@ export default function HomePage() {
       }
     });
   }, []);
-  const text = (key: string, field: string, fallback: string) => typeof blocks[key]?.[field] === "string" ? String(blocks[key][field]) : fallback;
   return (
-    <main id="main-content">
-      <section className="hero">
+    <main id="main-content" className={hero ? undefined : "home-without-hero"}>
+      {hero && <section className="hero">
         <Image
           src={assetPath("/images/je-tiki/amur-hero-new.webp")}
           alt="Амур под облачным небом"
@@ -90,24 +90,26 @@ export default function HomePage() {
         />
         <div className="hero-shade" />
         <div className="hero-copy hero-copy--centered">
-          <h1 className="sr-only">JE TIKI — украшения из дерева с берегов Амура</h1>
-          <p className="hero-tagline">Украшения из дерева<br />с берегов Амура</p>
-          <Link className="hero-link" href="/catalog">
-            Перейти в каталог <ArrowIcon className="arrow-icon" />
-          </Link>
+          {hero.eyebrow && <p className="eyebrow light">{hero.eyebrow}</p>}
+          <h1 className="hero-tagline">{hero.title || "JE TIKI"}</h1>
+          {hero.intro && <p className="hero-intro">{hero.intro}</p>}
+          {hero.cta && <Link className="hero-link" href="/catalog">
+            {hero.cta} <ArrowIcon className="arrow-icon" />
+          </Link>}
         </div>
-      </section>
+      </section>}
 
-      <section className="home-intro section-shell" aria-labelledby="home-intro-title">
+      {intro && <section className="home-intro section-shell" aria-labelledby="home-intro-title">
+        {intro.eyebrow && <p className="eyebrow">{intro.eyebrow}</p>}
         <div className="home-intro-grid" data-reveal>
-          <h2 id="home-intro-title">{text("home_intro", "title", "Современные предметы, в которых слышен Дальний Восток.")}</h2>
+          <h2 id="home-intro-title">{intro.title}</h2>
           <div>
-            <p>{text("home_intro", "paragraph1", "Мы работаем с японским вязом и другими дальневосточными породами и сохраняем рисунок дерева.")}</p>
-            <p>{text("home_intro", "paragraph2", "В формах украшений мы используем нанайский орнамент, природные мотивы Приамурья и простую геометрию.")}</p>
-            <Link className="text-link" href="#about">Знакомство с мастерской <ArrowIcon className="arrow-icon" /></Link>
+            {intro.paragraph1 && <p>{intro.paragraph1}</p>}
+            {intro.paragraph2 && <p>{intro.paragraph2}</p>}
+            {about && <Link className="text-link" href="#about">Знакомство с мастерской <ArrowIcon className="arrow-icon" /></Link>}
           </div>
         </div>
-      </section>
+      </section>}
 
       <section className="collection-stories" aria-labelledby="collections-title">
         <div className="collection-heading section-shell" data-reveal>
@@ -134,18 +136,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="about" id="about" aria-labelledby="about-title">
+      {about && <section className="about" id="about" aria-labelledby="about-title">
         <div className="about-shell section-shell">
+          {about.eyebrow && <p className="eyebrow">{about.eyebrow}</p>}
           <div className="about-grid" data-reveal>
-            <h2 id="about-title">{text("about", "title", "JE TIKI создаёт украшения и небольшие объекты в Хабаровске.")}</h2>
+            <h2 id="about-title">{about.title}</h2>
             <div className="about-copy">
-              <p>{text("about", "paragraph1", "Тёплые, тактильные вещи с локальным характером — для повседневной жизни, подарка и памяти о месте.")}</p>
-              <p>{text("about", "paragraph2", "Кроме украшений мы создаём сувениры и небольшие серии для событий и бизнеса.")}</p>
+              {about.paragraph1 && <p>{about.paragraph1}</p>}
+              {about.paragraph2 && <p>{about.paragraph2}</p>}
               <Link className="text-link" href="/catalog">Смотреть все предметы</Link>
             </div>
           </div>
         </div>
-      </section>
+      </section>}
     </main>
   );
 }

@@ -2,6 +2,10 @@
 /* eslint-disable @next/next/no-img-element -- Admin thumbnails can use arbitrary saved external URLs. */
 
 import { FormEvent, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { assetPath } from "@/lib/asset-path";
+import { availableProductSlug, productHref } from "@/lib/product-link";
+import { siteContentDefaults, siteContentFields, storefrontStorageKey, type SiteContentKey } from "@/lib/site-content";
 import { AdminPushSettings } from "@/components/admin-push-settings";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useModalFocus } from "@/lib/use-modal-focus";
@@ -22,29 +26,32 @@ type OrderRow = {
   tracking_url: string | null; comment: string | null; created_at: string; order_items: OrderItem[];
 };
 type CollectionRow = { id: string; slug: string; name: string; description: string; hero_image_url: string | null; sort_order: number; published: boolean };
-type ContentRow = { key: string; content: Record<string, unknown>; published: boolean; updated_at?: string };
+type ContentRow = { key: SiteContentKey; content: Record<string, unknown>; published: boolean; updated_at?: string };
 type DocumentRow = { slug: string; title: string; body: string; published: boolean; updated_at?: string };
 type ImageRow = { id: string; product_id: string; storage_path: string | null; external_url: string | null; alt_text: string; sort_order: number };
 
-const nav: Array<{ id: Section; label: string }> = [
-  { id: "dashboard", label: "Обзор" }, { id: "orders", label: "Заказы" },
-  { id: "products", label: "Товары" }, { id: "categories", label: "Категории" },
-  { id: "collections", label: "Коллекции" }, { id: "content", label: "Блоки сайта" },
-  { id: "documents", label: "Документы" },
+const nav: Array<{ label: string; items: Array<{ id: Section; label: string }> }> = [
+  { label: "Магазин", items: [{ id: "dashboard", label: "Обзор" }, { id: "orders", label: "Заказы" }] },
+  { label: "Каталог", items: [{ id: "products", label: "Товары" }, { id: "collections", label: "Коллекции" }, { id: "categories", label: "Категории" }] },
+  { label: "Витрина", items: [{ id: "content", label: "Блоки сайта" }, { id: "documents", label: "Документы" }] },
 ];
 
-const contentTemplates: Record<string, Record<string, unknown>> = {
-  hero: { eyebrow: "JE TIKI · Хабаровск", title: "Украшения из дерева с берегов Амура", intro: "Три коллекции о природе, знаках и памяти места.", cta: "Перейти в каталог" },
-  home_intro: { eyebrow: "О JE TIKI", title: "Современные предметы, в которых слышен Дальний Восток.", paragraph1: "Мы работаем с дальневосточными породами дерева.", paragraph2: "Источники форм — орнамент, природа Приамурья и простая геометрия." },
-  about: { eyebrow: "Мастерская", title: "JE TIKI создаёт украшения и небольшие объекты в Хабаровске.", paragraph1: "Тёплые, тактильные вещи с локальным характером.", paragraph2: "Создаём также сувениры и небольшие серии для событий и бизнеса." },
-  contacts: { phone: "89147771252", footer_text: "Украшения из дерева с берегов Амура" },
+const contentBlockTitles: Record<SiteContentKey, string> = {
+  hero: "Первый экран",
+  home_intro: "Вступление о бренде",
+  about: "О мастерской",
+  contacts: "Контакты в подвале",
 };
-
 const contentFieldLabels: Record<string, string> = {
   eyebrow: "Надпись над заголовком", title: "Заголовок", intro: "Вводный текст", cta: "Текст кнопки",
-  paragraph1: "Первый абзац", paragraph2: "Второй абзац", number: "Номер", line: "Короткая подпись",
-  description: "Описание", text: "Основной текст", note: "Дополнительный текст", phone: "Телефон",
-  footer_text: "Подпись в подвале",
+  paragraph1: "Первый абзац", paragraph2: "Второй абзац", phone: "Телефон", footer_text: "Подпись в подвале",
+};
+
+const productColumns = "id,slug,name,subtitle,description,price,old_price,orderable,status,featured,stock_quantity,category_id,collection_id,material,wood_type,metal,dimensions,care,updated_at";
+const emptyProduct: ProductRow = {
+  id: "", slug: "", name: "", subtitle: "", description: "", price: 0, old_price: null,
+  orderable: true, status: "draft", featured: false, stock_quantity: 0, category_id: null,
+  collection_id: "", material: "", wood_type: "", metal: "", dimensions: "", care: "", updated_at: "",
 };
 
 const money = (value: number) => new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(value);
@@ -89,10 +96,13 @@ export function AdminPanel() {
   const [images, setImages] = useState<ImageRow[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductRow | null>(null);
   const [mobileEditorOpen, setMobileEditorOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
   const [productCollectionFilter, setProductCollectionFilter] = useState("all");
   const [productCategoryFilter, setProductCategoryFilter] = useState("all");
   const productEditorRef = useRef<HTMLDivElement>(null);
-  const closeProductEditor = useCallback(() => setSelectedProduct(null), []);
+  const closeProductEditor = useCallback(() => {
+    if (!busy) setSelectedProduct(null);
+  }, [busy]);
   const hasSelectedProduct = selectedProduct !== null;
 
   useModalFocus({ active: mobileEditorOpen, containerRef: productEditorRef, onClose: closeProductEditor });
@@ -100,7 +110,7 @@ export function AdminPanel() {
   const loadData = useCallback(async () => {
     if (!supabase) return;
     const [p, o, c, co, sc, d, im] = await Promise.all([
-      supabase.from("products").select("id,slug,name,subtitle,description,price,old_price,orderable,status,featured,stock_quantity,category_id,collection_id,material,wood_type,metal,dimensions,care,updated_at").order("updated_at", { ascending: false }),
+      supabase.from("products").select(productColumns).order("updated_at", { ascending: false }),
       supabase.from("orders").select("*,order_items(id,product_name,product_subtitle,unit_price,quantity,line_total)").order("created_at", { ascending: false }),
       supabase.from("categories").select("id,slug,name,sort_order,published").order("sort_order"),
       supabase.from("collections").select("id,slug,name,description,hero_image_url,sort_order,published").order("sort_order"),
@@ -169,16 +179,85 @@ export function AdminPanel() {
     }
   }
 
-  async function run(action: () => PromiseLike<{ error: { message: string } | null }>, success: string) {
+  async function run(action: () => PromiseLike<{ error: { message: string } | null }>, success: string, updatesStorefront = false) {
     setBusy(true); setError(""); setMessage("");
     try {
       const result = await action();
-      if (result.error) setError(`Ошибка: ${result.error.message}`); else { setMessage(success); await loadData(); }
+      if (result.error) {
+        setError(`Ошибка: ${result.error.message}`);
+        return;
+      }
+
+      setMessage(success);
+      if (updatesStorefront) {
+        try { window.localStorage.setItem(storefrontStorageKey, crypto.randomUUID()); } catch {
+          // Public pages also refresh when their tab regains focus.
+        }
+      }
+      try { await loadData(); } catch {
+        setError(`${success} Не удалось обновить данные панели.`);
+      }
     } catch {
       setError("Не удалось выполнить действие. Проверьте подключение и попробуйте ещё раз.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function saveProduct(product: ProductRow) {
+    if (!supabase || busy) return;
+    const client = supabase;
+    setMessage(""); setError("");
+    const name = product.name.trim();
+    if (!name || !product.collection_id) {
+      setError("Укажите название и выберите коллекцию.");
+      return;
+    }
+
+    const { id, updated_at, old_price, price } = product;
+    const payload = {
+      name, price, old_price: old_price !== null && old_price >= price ? old_price : null,
+      category_id: product.category_id, collection_id: product.collection_id,
+      status: product.status, orderable: product.orderable, featured: product.featured,
+      stock_quantity: product.stock_quantity, description: product.description, subtitle: product.subtitle,
+      material: product.material, wood_type: product.wood_type, metal: product.metal,
+      dimensions: product.dimensions, care: product.care,
+    };
+
+    await run(async () => {
+      const save = async () => {
+        if (id) {
+          return client.from("products").update(payload).eq("id", id).eq("updated_at", updated_at)
+            .select(productColumns).maybeSingle();
+        }
+
+        const taken = new Set(products.map((item) => item.slug));
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const candidate = availableProductSlug(name, taken);
+          const result = await client.from("products").insert({ ...payload, slug: candidate }).select(productColumns).single();
+          if (result.error?.code !== "23505") return result;
+          taken.add(candidate);
+        }
+        return { data: null, error: { message: "Не удалось создать уникальную ссылку. Обновите список товаров и повторите сохранение." } };
+      };
+
+      const { data, error: saveError } = await save();
+      if (saveError) return { error: saveError };
+      if (!data) return { error: { message: "Товар изменился после открытия карточки. Обновите список и откройте его снова." } };
+      setSelectedProduct(data as ProductRow);
+      return { error: null };
+    }, id ? "Товар сохранён." : "Товар создан. Теперь можно добавить фотографии.", true);
+  }
+
+  async function saveContent(value: ContentRow) {
+    if (!supabase || busy) return;
+    const client = supabase;
+    await run(async () => {
+      const { error: saveError } = await client.from("site_content")
+        .upsert({ key: value.key, published: value.published, content: value.content }, { onConflict: "key" })
+        .select("key").single();
+      return { error: saveError };
+    }, value.published ? "Блок сохранён и показывается на сайте." : "Блок сохранён и скрыт на сайте.", true);
   }
 
   async function replaceProductImage(image: ImageRow, file: File) {
@@ -230,6 +309,7 @@ export function AdminPanel() {
     lowStock: products.filter((product) => product.stock_quantity <= 2).length,
   }), [orders, products]);
   const filteredProducts = useMemo(() => [...products]
+    .filter((product) => product.name.toLocaleLowerCase("ru").includes(productSearch.trim().toLocaleLowerCase("ru")))
     .filter((product) => productCollectionFilter === "all" || product.collection_id === productCollectionFilter)
     .filter((product) => productCategoryFilter === "all" || product.category_id === productCategoryFilter)
     .sort((left, right) => {
@@ -240,7 +320,13 @@ export function AdminPanel() {
       const leftCategory = categories.find((item) => item.id === left.category_id)?.name ?? "";
       const rightCategory = categories.find((item) => item.id === right.category_id)?.name ?? "";
       return leftCategory.localeCompare(rightCategory, "ru") || left.name.localeCompare(right.name, "ru");
-    }), [categories, collections, productCategoryFilter, productCollectionFilter, products]);
+    }), [categories, collections, productCategoryFilter, productCollectionFilter, productSearch, products]);
+
+  function openProduct(product: ProductRow) {
+    setError("");
+    setMessage("");
+    setSelectedProduct(product);
+  }
 
   if (authState === "loading") return <main id="main-content" className="admin-loading"><p>Загружаем панель управления…</p></main>;
   if (authState === "login") return (
@@ -258,13 +344,22 @@ export function AdminPanel() {
   return (
     <main id="main-content" className="admin-app">
       <aside className="admin-sidebar">
-        <div><p className="eyebrow">JE TIKI</p><h1>Управление</h1></div>
-        <nav aria-label="Разделы панели">{nav.map((item) => <button key={item.id} className={section === item.id ? "active" : ""} onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
-        <button className="admin-signout" onClick={async () => { await supabase?.auth.signOut(); setAuthState("login"); }}>Выйти</button>
+        <div className="admin-brand"><span>JE TIKI</span><h1>Управление магазином</h1></div>
+        <nav aria-label="Разделы панели">{nav.map((group) => <div className="admin-nav-group" key={group.label}>
+          <p>{group.label}</p>
+          <div className="admin-nav-items">{group.items.map((item) => <button key={item.id}
+            aria-current={section === item.id ? "page" : undefined} disabled={busy} onClick={() => {
+              setSection(item.id); setError(""); setMessage("");
+            }}>{item.label}</button>)}</div>
+        </div>)}</nav>
+        <div className="admin-sidebar-actions">
+          <Link href="/" target="_blank" rel="noopener noreferrer">Открыть сайт</Link>
+          <button className="admin-signout" onClick={async () => { await supabase?.auth.signOut(); setAuthState("login"); }}>Выйти</button>
+        </div>
       </aside>
       <div className="admin-workspace">
-        <header className="admin-toolbar"><h2>{nav.find((item) => item.id === section)?.label}</h2><button className="secondary-button" disabled={busy} onClick={() => void refreshData()}>Обновить</button></header>
-        {(message || error) && <div className={error ? "admin-alert error" : "admin-alert"} role={error ? "alert" : "status"}>{error || message}</div>}
+        <header className="admin-toolbar"><h2>{nav.flatMap((group) => group.items).find((item) => item.id === section)?.label}</h2><button className="secondary-button" disabled={busy} onClick={() => void refreshData()}>Обновить</button></header>
+        {!mobileEditorOpen && (message || error) && <div className={error ? "admin-alert error" : "admin-alert"} role={error ? "alert" : "status"}>{error || message}</div>}
 
         {section === "dashboard" && <section className="admin-section">
           <AdminPushSettings />
@@ -283,20 +378,34 @@ export function AdminPanel() {
         </section>}
 
         {section === "products" && <section className="admin-section admin-split">
-          <div className="admin-list"><button className="admin-add" onClick={() => setSelectedProduct({ id: "", slug: "new-product", name: "Новый товар", subtitle: "", description: "", price: 1000, old_price: null, orderable: true, status: "draft", featured: false, stock_quantity: 0, category_id: categories[0]?.id ?? null, collection_id: collections[0]?.id ?? "", material: "", wood_type: "", metal: "", dimensions: "", care: "", updated_at: "" })}>+ Добавить товар</button>
+          <div className="admin-list">
+            <button className="admin-add" disabled={busy} onClick={() => openProduct(emptyProduct)}>+ Добавить товар</button>
             <div className="admin-product-filters">
+              <label>Поиск по названию<input type="search" value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Например, браслет" /></label>
               <label>Коллекция<select value={productCollectionFilter} onChange={(event) => setProductCollectionFilter(event.target.value)}><option value="all">Все коллекции</option>{collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}</select></label>
               <label>Вид товара<select value={productCategoryFilter} onChange={(event) => setProductCategoryFilter(event.target.value)}><option value="all">Все виды</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
             </div>
             <p className="admin-product-count">Показано: {filteredProducts.length}</p>
-            {filteredProducts.map((product) => { const cover = images.filter((image) => image.product_id === product.id).sort((a, b) => a.sort_order - b.sort_order)[0]; const src = cover?.external_url || (cover?.storage_path ? `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/product-media/${cover.storage_path}` : ""); return <button key={product.id} className={`admin-product-row${selectedProduct?.id === product.id ? " active" : ""}`} onClick={() => setSelectedProduct(product)}>{src ? <img src={src} alt="" loading="lazy" decoding="async" /> : <span className="admin-product-placeholder" aria-hidden="true">—</span>}<span><strong>{product.name}</strong><small>{collections.find((item) => item.id === product.collection_id)?.name} · {categories.find((item) => item.id === product.category_id)?.name}</small><small>{money(product.price)} · {product.status}</small></span></button>; })}
+            {!filteredProducts.length && <p className="admin-empty">Товары не найдены.</p>}
+            {filteredProducts.map((product) => {
+              const cover = images.find((image) => image.product_id === product.id);
+              const src = cover?.external_url || (cover?.storage_path ? supabase?.storage.from("product-media").getPublicUrl(cover.storage_path).data.publicUrl : "");
+              const visible = product.status === "published";
+              return <button key={product.id} aria-pressed={selectedProduct?.id === product.id} disabled={busy}
+                className={`admin-product-row${selectedProduct?.id === product.id ? " active" : ""}`} onClick={() => openProduct(product)}>
+                {src ? <img src={src} alt="" loading="lazy" decoding="async" /> : <span className="admin-product-placeholder" aria-hidden="true">—</span>}
+                <span>
+                  <strong>{product.name}</strong>
+                  <small>{money(product.price)} · {product.stock_quantity} шт.</small>
+                  <span className={`admin-visibility${visible ? " visible" : ""}`}>{visible ? "На сайте" : "Скрыт"}</span>
+                </span>
+              </button>;
+            })}
           </div>
-          <ProductEditor editorRef={productEditorRef} value={selectedProduct} categories={categories} collections={collections} images={images.filter((image) => image.product_id === selectedProduct?.id)} busy={busy} onChange={setSelectedProduct} onClose={closeProductEditor} onSave={async (product) => {
-            if (!product.collection_id) { setError("Выберите коллекцию товара."); return; }
-            const payload = { slug: product.slug, name: product.name, subtitle: product.subtitle, description: product.description, price: product.price, old_price: product.old_price, orderable: product.orderable, status: product.status, featured: product.featured, stock_quantity: product.stock_quantity, category_id: product.category_id, collection_id: product.collection_id, material: product.material, wood_type: product.wood_type, metal: product.metal, dimensions: product.dimensions, care: product.care };
-            const id = product.id;
-            await run(() => id ? supabase!.from("products").update(payload).eq("id", id) : supabase!.from("products").insert(payload), id ? "Товар сохранён." : "Товар создан.");
-          }} onUpload={async (files, productId) => {
+          <ProductEditor key={selectedProduct?.id ?? "empty"} editorRef={productEditorRef} value={selectedProduct}
+            categories={categories} collections={collections} images={images.filter((image) => image.product_id === selectedProduct?.id)}
+            busy={busy} mobile={mobileEditorOpen} message={message} error={error} takenSlugs={new Set(products.map((item) => item.slug))}
+            onChange={setSelectedProduct} onClose={closeProductEditor} onSave={saveProduct} onUpload={async (files, productId) => {
             if (!supabase || !productId) return setError("Сначала сохраните новый товар, затем добавьте фотографии.");
             const currentCount = images.filter((image) => image.product_id === productId).length;
             if (currentCount + files.length > 10) return setError(`Можно добавить ещё не более ${10 - currentCount} фото.`);
@@ -338,7 +447,11 @@ export function AdminPanel() {
         </div></section>}
 
         {section === "content" && <section className="admin-section"><div className="admin-rows">
-          {Object.entries(contentTemplates).map(([key, template]) => <ContentEditor key={key} contentKey={key} value={content.find((item) => item.key === key) ?? { key, content: template, published: true }} busy={busy} onSave={(value) => run(() => supabase!.from("site_content").upsert(value, { onConflict: "key" }), "Блок сайта сохранён и уже доступен витрине.")} />)}
+          {(Object.keys(siteContentDefaults) as SiteContentKey[]).map((key) => {
+            const block = content.find((item) => item.key === key);
+            return <ContentEditor key={`${key}:${block?.updated_at ?? ""}`}
+              contentKey={key} value={block} busy={busy} onSave={saveContent} />;
+          })}
         </div></section>}
 
         {section === "documents" && <section className="admin-section"><div className="admin-rows">{documents.map((document) => <DocumentEditor key={document.slug} value={document} busy={busy} onSave={(value) => run(() => supabase!.from("legal_documents").update({ title: value.title, body: value.body, published: value.published }).eq("slug", value.slug), "Документ сохранён.")} />)}</div></section>}
@@ -362,25 +475,158 @@ function OrderEditor({ value, onSave, busy }: { value: OrderRow; onSave: (order:
   </div></details>;
 }
 
-function ProductEditor({ editorRef, value, categories, collections, images, busy, onChange, onClose, onSave, onUpload, onReplaceImage, onUpdateImage, onDeleteImage }: { editorRef: RefObject<HTMLDivElement | null>; value: ProductRow | null; categories: CategoryRow[]; collections: CollectionRow[]; images: ImageRow[]; busy: boolean; onChange: (value: ProductRow) => void; onClose: () => void; onSave: (value: ProductRow) => Promise<void>; onUpload: (files: File[], productId: string) => Promise<void>; onReplaceImage: (image: ImageRow, file: File) => Promise<void>; onUpdateImage: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>; onDeleteImage: (image: ImageRow) => Promise<void> }) {
-  if (!value) return <div className="admin-editor admin-product-editor admin-empty">Выберите товар слева.</div>;
-  const set = <K extends keyof ProductRow>(key: K, next: ProductRow[K]) => onChange({ ...value, [key]: next });
-  return <div ref={editorRef} tabIndex={-1} className="admin-editor admin-product-editor"><header className="admin-product-editor-header"><button data-modal-initial-focus type="button" className="admin-product-editor-back" onClick={onClose} aria-label="Вернуться к списку товаров">←</button><div><p>Редактор товара</p><h3>{value.id ? value.name : "Новый товар"}</h3></div></header><div className="admin-form-grid">
-    <Field label="Название" value={value.name} onChange={(v) => set("name", v)} /><Field label="Slug (адрес)" value={value.slug} onChange={(v) => set("slug", v)} />
-    <Field label="Подзаголовок" value={value.subtitle ?? ""} onChange={(v) => set("subtitle", v)} /><label>Категория<select value={value.category_id ?? ""} onChange={(e) => set("category_id", e.target.value || null)}>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-    <label>Коллекция<select required value={value.collection_id} onChange={(e) => set("collection_id", e.target.value)}><option value="" disabled>Выберите коллекцию</option>{collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}</select></label>
-    <Field label="Цена, ₽" type="number" value={String(value.price)} onChange={(v) => set("price", Number(v) || 1000)} /><Field label="Остаток" type="number" value={String(value.stock_quantity)} onChange={(v) => set("stock_quantity", Number(v) || 0)} />
-    <Select label="Публикация" value={value.status} options={["draft","published","archived"]} onChange={(v) => set("status", v as ProductRow["status"])} /><Field label="Материал" value={value.material ?? ""} onChange={(v) => set("material", v)} />
-    <Field label="Порода дерева" value={value.wood_type ?? ""} onChange={(v) => set("wood_type", v)} /><Field label="Металл" value={value.metal ?? ""} onChange={(v) => set("metal", v)} /><Field label="Размеры" value={value.dimensions ?? ""} onChange={(v) => set("dimensions", v)} />
-  </div><TextArea label="Описание" value={value.description ?? ""} onChange={(v) => set("description", v)} /><TextArea label="Уход" value={value.care ?? ""} onChange={(v) => set("care", v)} /><div className="admin-checks"><label><input type="checkbox" checked={value.orderable} onChange={(e) => set("orderable", e.target.checked)} /> Можно заказать</label><label><input type="checkbox" checked={value.featured} onChange={(e) => set("featured", e.target.checked)} /> На главной</label></div><ProductGallery product={value} images={images} busy={busy} onUpload={onUpload} onReplace={onReplaceImage} onUpdate={onUpdateImage} onDelete={onDeleteImage} /><div className="admin-product-editor-savebar"><button className="primary-button" disabled={busy} onClick={() => void onSave(value)}>{busy ? "Сохраняем…" : "Сохранить товар"}</button></div></div>;
+function ProductEditor({
+  editorRef, value, categories, collections, images, busy, mobile, message, error, takenSlugs,
+  onChange, onClose, onSave, onUpload, onReplaceImage, onUpdateImage, onDeleteImage,
+}: {
+  editorRef: RefObject<HTMLDivElement | null>;
+  value: ProductRow | null;
+  categories: CategoryRow[];
+  collections: CollectionRow[];
+  images: ImageRow[];
+  busy: boolean;
+  mobile: boolean;
+  message: string;
+  error: string;
+  takenSlugs: Set<string>;
+  onChange: (value: ProductRow) => void;
+  onClose: () => void;
+  onSave: (value: ProductRow) => Promise<void>;
+  onUpload: (files: File[], productId: string) => Promise<void>;
+  onReplaceImage: (image: ImageRow, file: File) => Promise<void>;
+  onUpdateImage: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>;
+  onDeleteImage: (image: ImageRow) => Promise<void>;
+}) {
+  if (!value) return <div className="admin-editor admin-product-editor admin-empty">Выберите товар или добавьте новый.</div>;
+  const product = value;
+  const set = <K extends keyof ProductRow>(key: K, next: ProductRow[K]) => onChange({ ...product, [key]: next });
+  const visible = product.status === "published";
+  const address = product.slug ? assetPath(productHref(product.slug)) : "";
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    void onSave({ ...product, price: Number(form.get("price")), stock_quantity: Number(form.get("stock")) });
+  }
+
+  return <div ref={editorRef} tabIndex={-1} className="admin-editor admin-product-editor"
+    role={mobile ? "dialog" : undefined} aria-modal={mobile || undefined} aria-labelledby="admin-product-title">
+    <header className="admin-product-editor-header">
+      <button data-modal-initial-focus type="button" className="admin-product-editor-back" disabled={busy} onClick={onClose}
+        aria-label="Вернуться к списку товаров">←</button>
+      <h3 id="admin-product-title">{product.id ? "Карточка товара" : "Новый товар"}</h3>
+    </header>
+
+    {mobile && (message || error) && <div className={error ? "admin-alert error" : "admin-alert"}
+      role={error ? "alert" : "status"}>{error || message}</div>}
+
+    <form id="admin-product-form" onSubmit={submit}>
+      <fieldset disabled={busy} className="admin-product-fields">
+        <section className="admin-product-group" aria-labelledby="admin-product-main">
+          <h4 id="admin-product-main">Основное</h4>
+          <label>Название<input required value={product.name} placeholder="Название украшения" onChange={(event) => set("name", event.target.value)} /></label>
+          <div className="admin-form-grid">
+            <label>Коллекция
+              <select required value={product.collection_id} onChange={(event) => set("collection_id", event.target.value)}>
+                <option value="" disabled>Выберите коллекцию</option>
+                {collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
+              </select>
+            </label>
+            <label>Вид товара
+              <select value={product.category_id ?? ""} onChange={(event) => set("category_id", event.target.value || null)}>
+                <option value="">Без категории</option>
+                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </select>
+            </label>
+          </div>
+          <TextArea label="Описание" rows={3} value={product.description ?? ""} onChange={(next) => set("description", next)} />
+        </section>
+
+        <section className="admin-product-group" aria-labelledby="admin-product-inventory">
+          <h4 id="admin-product-inventory">Цена и наличие</h4>
+          <div className="admin-form-grid">
+            <label>Цена, ₽<input name="price" type="number" inputMode="numeric" min={0} max={2147483647} step={1}
+              required defaultValue={product.id ? product.price : ""} placeholder="Например, 2500" /></label>
+            <label>В наличии, шт.<input name="stock" type="number" inputMode="numeric" min={0} max={2147483647} step={1}
+              required defaultValue={product.stock_quantity} aria-describedby="admin-stock-hint" /></label>
+          </div>
+          <p className="admin-field-hint" id="admin-stock-hint">При остатке 0 товар доступен под заказ, если заказы включены.</p>
+          <Switch label="Принимать заказы" checked={product.orderable} onChange={(next) => set("orderable", next)} />
+        </section>
+
+        <section className="admin-product-group" aria-labelledby="admin-product-visibility">
+          <h4 id="admin-product-visibility">На сайте</h4>
+          <Switch label="Показывать на сайте" checked={visible}
+            onChange={(next) => set("status", next ? "published" : "draft")} />
+          {address ? <p className="admin-field-hint">Ссылка на товар {product.status === "published"
+            ? <a href={address} target="_blank" rel="noopener noreferrer">{address}</a>
+            : <span>{address}</span>}</p>
+            : <p className="admin-field-hint">{product.name.trim()
+              ? `Адрес создастся при сохранении: ${assetPath(productHref(availableProductSlug(product.name, takenSlugs)))}`
+              : "Адрес создастся автоматически из названия."}</p>}
+        </section>
+
+        <details className="admin-product-details">
+          <summary>Характеристики и размещение</summary>
+          <div className="admin-form-grid">
+            <Field label="Подзаголовок" value={product.subtitle ?? ""} onChange={(next) => set("subtitle", next)} />
+            <Field label="Материал" value={product.material ?? ""} onChange={(next) => set("material", next)} />
+            <Field label="Порода дерева" value={product.wood_type ?? ""} onChange={(next) => set("wood_type", next)} />
+            <Field label="Металл" value={product.metal ?? ""} onChange={(next) => set("metal", next)} />
+            <Field label="Размеры" value={product.dimensions ?? ""} onChange={(next) => set("dimensions", next)} />
+          </div>
+          <TextArea label="Уход" rows={3} value={product.care ?? ""} onChange={(next) => set("care", next)} />
+          <Switch label="Добавить в подборку на главной" checked={product.featured} onChange={(next) => set("featured", next)} />
+        </details>
+      </fieldset>
+    </form>
+
+    <ProductGallery product={product} images={images} busy={busy} onUpload={onUpload} onReplace={onReplaceImage}
+      onUpdate={onUpdateImage} onDelete={onDeleteImage} />
+    <div className="admin-product-editor-savebar">
+      <button className="primary-button" type="submit" form="admin-product-form" disabled={busy}>
+        {product.id ? "Сохранить товар" : "Создать товар"}
+      </button>
+    </div>
+  </div>;
+}
+
+function Switch({ label, checked, onChange, disabled }: {
+  label: string; checked: boolean; onChange: (next: boolean) => void; disabled?: boolean;
+}) {
+  return <label className="admin-switch">
+    <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
+    {label}
+  </label>;
 }
 
 function CategoryEditor({ value, onSave, busy }: { value: CategoryRow; onSave: (value: CategoryRow) => Promise<void>; busy: boolean }) { const [row, setRow] = useState(value); useEffect(() => setRow(value), [value]); return <article className="admin-inline-editor"><div className="admin-form-grid"><Field label="Название" value={row.name} onChange={(name) => setRow({ ...row, name })} /><Field label="Slug" value={row.slug} onChange={(slug) => setRow({ ...row, slug })} /><Field label="Порядок" type="number" value={String(row.sort_order)} onChange={(v) => setRow({ ...row, sort_order: Number(v) || 0 })} /></div><label className="check"><input type="checkbox" checked={row.published} onChange={(e) => setRow({ ...row, published: e.target.checked })} /> Опубликована</label><button className="secondary-button" disabled={busy} onClick={() => void onSave(row)}>Сохранить</button></article>; }
 function CollectionEditor({ value, products, onSave, onUploadHero, busy }: { value: CollectionRow; products: ProductRow[]; onSave: (value: CollectionRow) => Promise<void>; onUploadHero: (file: File, collectionId: string) => Promise<void>; busy: boolean }) { const [row, setRow] = useState(value); useEffect(() => setRow(value), [value]); const assigned = products.filter((product) => product.collection_id === row.id); return <article className="admin-inline-editor"><h3>{row.name}</h3>{row.hero_image_url && <img className="collection-editor-hero" src={row.hero_image_url} alt="" />}<div className="admin-form-grid"><Field label="Название" value={row.name} onChange={(name) => setRow({ ...row, name })} /><Field label="Slug" value={row.slug} onChange={(slug) => setRow({ ...row, slug })} /><Field label="Порядок" type="number" value={String(row.sort_order)} onChange={(sort_order) => setRow({ ...row, sort_order: Number(sort_order) || 0 })} /><Field label="Ссылка на широкую обложку" value={row.hero_image_url ?? ""} onChange={(hero_image_url) => setRow({ ...row, hero_image_url })} /></div><TextArea label="Описание" value={row.description ?? ""} onChange={(description) => setRow({ ...row, description })} /><label className={`secondary-button gallery-upload ${!row.id ? "disabled" : ""}`}>Загрузить широкую обложку<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={!row.id || busy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void onUploadHero(file, row.id); event.target.value = ""; }} /></label><details><summary>Товары коллекции ({assigned.length})</summary><div className="admin-product-checks">{assigned.length ? assigned.map((product) => <span key={product.id}>{product.name}</span>) : <span>Товаров пока нет.</span>}</div></details><label className="check"><input type="checkbox" checked={row.published} onChange={(e) => setRow({ ...row, published: e.target.checked })} /> Опубликована</label><button className="secondary-button" disabled={busy} onClick={() => void onSave(row)}>Сохранить коллекцию</button></article>; }
-function ContentEditor({ contentKey, value, onSave, busy }: { contentKey: string; value: ContentRow; onSave: (value: ContentRow) => Promise<void>; busy: boolean }) { const template = contentTemplates[contentKey] ?? {}; const editableKeys = Object.keys(template); const makeFields = () => Object.fromEntries(editableKeys.map((key) => [key, String(value.content[key] ?? template[key] ?? "")])); const [fields, setFields] = useState<Record<string, string>>(makeFields); const [published, setPublished] = useState(value.published); useEffect(() => { setFields(makeFields()); setPublished(value.published); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, contentKey]); return <article className="admin-inline-editor"><h3>{contentBlockTitle(contentKey)}</h3><div className="admin-content-fields">{editableKeys.map((key) => { const label = contentFieldLabels[key] ?? key; const fieldValue = fields[key] ?? ""; const multiline = fieldValue.length > 80 || ["intro", "description", "text", "note", "paragraph1", "paragraph2"].includes(key); return multiline ? <TextArea key={key} label={label} rows={4} value={fieldValue} onChange={(next) => setFields({ ...fields, [key]: next })} /> : <Field key={key} label={label} value={fieldValue} onChange={(next) => setFields({ ...fields, [key]: next })} />; })}</div><label className="check"><input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} /> Показывать блок на сайте</label><button className="secondary-button" disabled={busy} onClick={() => void onSave({ key: contentKey, content: { ...value.content, ...fields }, published })}>Сохранить блок</button></article>; }
+function ContentEditor({ contentKey, value, onSave, busy }: {
+  contentKey: SiteContentKey; value?: ContentRow; onSave: (value: ContentRow) => Promise<void>; busy: boolean;
+}) {
+  const [fields, setFields] = useState<Record<string, string>>(() => siteContentFields(contentKey, value?.content));
+  const [published, setPublished] = useState(value?.published ?? true);
 
-function contentBlockTitle(key: string) { return ({ hero: "Первый экран", home_intro: "Вступление о бренде", about: "О мастерской", contacts: "Контакты и подвал" } as Record<string, string>)[key] ?? key; }
+  return <article className="admin-inline-editor">
+    <h3>{contentBlockTitles[contentKey]}</h3>
+    <fieldset className="admin-content-fields" disabled={busy}>
+      {Object.entries(fields).map(([key, text]) => {
+        const label = contentFieldLabels[key] ?? key;
+        const onChange = (next: string) => setFields((current) => ({ ...current, [key]: next }));
+        return ["intro", "paragraph1", "paragraph2"].includes(key)
+          ? <TextArea key={key} label={label} rows={3} value={text} onChange={onChange} />
+          : <Field key={key} label={label} value={text} onChange={onChange} />;
+      })}
+    </fieldset>
+    <Switch label="Показывать блок на сайте" checked={published} onChange={setPublished} disabled={busy} />
+    <button type="button" className="secondary-button" disabled={busy}
+      onClick={() => void onSave({ key: contentKey, content: { ...value?.content, ...fields }, published })}>
+      Сохранить блок
+    </button>
+  </article>;
+}
+
 function DocumentEditor({ value, onSave, busy }: { value: DocumentRow; onSave: (value: DocumentRow) => Promise<void>; busy: boolean }) { const [row, setRow] = useState(value); useEffect(() => setRow(value), [value]); return <article className="admin-inline-editor"><p className="eyebrow">/{row.slug}</p><Field label="Заголовок" value={row.title} onChange={(title) => setRow({ ...row, title })} /><TextArea label="Текст документа" rows={14} value={row.body ?? ""} onChange={(body) => setRow({ ...row, body })} /><label className="check"><input type="checkbox" checked={row.published} onChange={(e) => setRow({ ...row, published: e.target.checked })} /> Опубликован</label><button className="secondary-button" disabled={busy} onClick={() => void onSave(row)}>Сохранить документ</button></article>; }
 function ProductGallery({ product, images, busy, onUpload, onReplace, onUpdate, onDelete }: { product: ProductRow; images: ImageRow[]; busy: boolean; onUpload: (files: File[], productId: string) => Promise<void>; onReplace: (image: ImageRow, file: File) => Promise<void>; onUpdate: (image: ImageRow, patch: Partial<ImageRow>) => Promise<void>; onDelete: (image: ImageRow) => Promise<void> }) {
   const replacementInput = useRef<HTMLInputElement>(null);
@@ -431,7 +677,6 @@ function ProductGallery({ product, images, busy, onUpload, onReplace, onUpdate, 
 }
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { return <label>{label}<input type={type} value={value} onChange={(e) => onChange(e.target.value)} /></label>; }
 function TextArea({ label, value, onChange, rows = 5 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) { return <label className="admin-textarea">{label}<textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} /></label>; }
-function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label>{label}<select value={value} onChange={(e) => onChange(e.target.value)}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }
 function LabeledSelect({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) { return <label>{label}<select value={value} onChange={(e) => onChange(e.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
 
 function OrderStatusBadge({ status }: { status: string }) {

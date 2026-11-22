@@ -19,7 +19,7 @@ export function ProductOverlay({ product = null, slug }: { product?: Product | n
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [liveProduct, setLiveProduct] = useState<Product | null>(
-    product ?? (slug ? productFallbacks.find((item) => item.slug === slug) ?? null : null),
+    getSupabaseBrowserClient() ? null : product ?? (slug ? productFallbacks.find((item) => item.slug === slug) ?? null : null),
   );
   const [loadFailed, setLoadFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -33,18 +33,22 @@ export function ProductOverlay({ product = null, slug }: { product?: Product | n
     const supabase = getSupabaseBrowserClient();
     const requestedSlug = new URLSearchParams(window.location.search).get("slug") || slug || product?.slug;
     const fallback = product ?? productFallbacks.find((item) => item.slug === requestedSlug) ?? null;
-    if (fallback) setLiveProduct(fallback);
     setQuantity(1);
     setActiveImageIndex(0);
-    if (!supabase || !requestedSlug) { setLoadFailed(!fallback); return; }
+    if (!supabase || !requestedSlug) {
+      setLiveProduct(fallback);
+      setLoadFailed(!fallback);
+      return;
+    }
+
+    setLiveProduct(null);
 
     let active = true;
     setLoadFailed(false);
-    void supabase.from("products").select("slug,name,subtitle,description,price,orderable,stock_quantity,material,wood_type,metal,dimensions,care,categories(name),collections:collections!products_collection_id_fkey(slug,name),product_images(storage_path,external_url,sort_order)").eq("slug", requestedSlug).eq("status", "published").maybeSingle().then(({ data, error }) => {
+    void supabase.from("products").select("slug,name,subtitle,description,price,orderable,stock_quantity,material,wood_type,metal,dimensions,care,categories(name),collections:collections!products_collection_id_fkey(slug,name),product_images(storage_path,external_url,sort_order)").eq("slug", requestedSlug).eq("status", "published").maybeSingle().then(({ data }) => {
       if (!active) return;
       if (data) setLiveProduct(mapSupabaseProduct(data, fallback ?? undefined));
-      else if (!error) { setLiveProduct(null); setLoadFailed(true); }
-      else if (!fallback) setLoadFailed(true);
+      else setLoadFailed(true);
     });
     return () => { active = false; };
   }, [product, reloadKey, slug]);
@@ -138,22 +142,22 @@ export function ProductOverlay({ product = null, slug }: { product?: Product | n
         <div className="product-info">
           <div className="product-title-row">
             <div>
-              <p className="eyebrow">{product.subtitle}</p>
+              {product.subtitle && <p className="eyebrow">{product.subtitle}</p>}
               <h1 id="product-title">{product.name}</h1>
             </div>
             <p className="product-price">{formatPrice(product.price)}</p>
           </div>
 
-          <p className="product-lead">{product.description}</p>
+          {product.description && <p className="product-lead">{product.description}</p>}
 
           <dl className="spec-list">
-            <div><dt>Материал</dt><dd>{product.material}</dd></div>
+            {product.material && <div><dt>Материал</dt><dd>{product.material}</dd></div>}
             <div><dt>Коллекция</dt><dd>{product.collection}</dd></div>
             {product.variants && <div><dt>Варианты</dt><dd>{product.variants.join(" · ")}</dd></div>}
-            <div><dt>Порода дерева</dt><dd>{product.woodType}</dd></div>
-            <div><dt>Металл</dt><dd>{product.metal}</dd></div>
-            <div><dt>Размер</dt><dd>{product.dimensions}</dd></div>
-            <div><dt>Наличие</dt><dd>{product.stock > 0 ? `В наличии: ${product.stock}` : "Доступно под заказ"}</dd></div>
+            {product.woodType && <div><dt>Порода дерева</dt><dd>{product.woodType}</dd></div>}
+            {product.metal && <div><dt>Металл</dt><dd>{product.metal}</dd></div>}
+            {product.dimensions && <div><dt>Размер</dt><dd>{product.dimensions}</dd></div>}
+            <div><dt>Наличие</dt><dd>{product.stock > 0 ? `В наличии: ${product.stock}` : product.orderable ? "Доступно под заказ" : "Нет в наличии"}</dd></div>
           </dl>
 
           {product.orderable ? <div className="purchase-row">
@@ -186,14 +190,14 @@ export function ProductOverlay({ product = null, slug }: { product?: Product | n
           </div> : <p className="product-unavailable" role="status">Это изделие временно недоступно для заказа.</p>}
 
           <div className="product-accordions">
-            <details open>
+            {product.material && <details open>
               <summary>Материалы и особенности</summary>
               <p>{product.material}. Фактура и оттенок дерева могут незначительно отличаться от фотографии.</p>
-            </details>
-            <details>
+            </details>}
+            {product.care && <details>
               <summary>Уход</summary>
               <p>{product.care}</p>
-            </details>
+            </details>}
             <details>
               <summary>Доставка</summary>
               <p>СДЭК или Почта России. Бесплатно при заказе от 5 000 ₽.</p>

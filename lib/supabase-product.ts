@@ -21,7 +21,7 @@ export function mapSupabaseProduct(row: ProductRecord, fallback?: Product): Prod
   return {
     slug: row.slug,
     name: row.name,
-    subtitle: row.subtitle || fallback?.subtitle || "Ручная работа JE TIKI",
+    subtitle: row.subtitle ?? fallback?.subtitle ?? "Ручная работа JE TIKI",
     category: (categoryRecord?.name || fallback?.category || "Сувениры") as Product["category"],
     price: row.price,
     orderable: row.orderable,
@@ -32,12 +32,12 @@ export function mapSupabaseProduct(row: ProductRecord, fallback?: Product): Prod
     images,
     collection: collectionRecord?.name || fallback?.collection || "JE TIKI",
     variants: fallback?.variants,
-    material: row.material || fallback?.material || "Натуральное дерево",
-    woodType: row.wood_type || fallback?.woodType || "Дальневосточные породы дерева",
-    metal: row.metal || fallback?.metal || "Сталь",
-    dimensions: row.dimensions || fallback?.dimensions || "Уточняются",
+    material: row.material ?? fallback?.material ?? "Натуральное дерево",
+    woodType: row.wood_type ?? fallback?.woodType ?? "Дальневосточные породы дерева",
+    metal: row.metal ?? fallback?.metal ?? "Сталь",
+    dimensions: row.dimensions ?? fallback?.dimensions ?? "Уточняются",
     stock: row.stock_quantity,
-    description: row.description || fallback?.description || "Предмет ручной работы JE TIKI.",
-    care: row.care || fallback?.care || "Берегите от воды и прямого солнца.",
+    description: row.description ?? fallback?.description ?? "Предмет ручной работы JE TIKI.",
+    care: row.care ?? fallback?.care ?? "Берегите от воды и прямого солнца.",
   };
 }
