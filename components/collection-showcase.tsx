@@ -62,7 +62,7 @@ export function CollectionShowcase({ collection, index }: { collection: HomeColl
           <h3>{collection.name}</h3>
           <p className="collection-description">{expandedStory ? sentences[0].trim() : collection.description}</p>
           {expandedStory && <details className="collection-story"><summary>История коллекции</summary><p>{sentences.slice(1).join("").trim()}</p></details>}
-          <Link className="collection-catalog-link" href={`/catalog?collection=${encodeURIComponent(collection.name)}`}>
+          <Link className="collection-catalog-link" href={`/catalog?collection=${encodeURIComponent(collection.slug)}`}>
             Смотреть коллекцию <ArrowIcon className="arrow-icon" />
           </Link>
         </div>

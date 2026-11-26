@@ -1,9 +1,10 @@
 "use client";
 
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart-provider";
 import { CloseIcon, MinusIcon, PlusIcon } from "@/components/icons";
 import {
@@ -28,13 +29,18 @@ export function CartDrawer() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(products);
-  const [catalogReady, setCatalogReady] = useState(false);
+  const [catalogReady, setCatalogReady] = useState(!supabase);
+  const [checkingCheckout, setCheckingCheckout] = useState(false);
   const [legalDocumentsPublished, setLegalDocumentsPublished] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const checkoutRef = useRef<HTMLFormElement>(null);
+  const submittingRef = useRef(false);
+  const dismissCart = useCallback(() => {
+    if (!submittingRef.current) closeCart();
+  }, [closeCart]);
 
-  useModalFocus({ active: present, containerRef: dialogRef, onClose: closeCart });
+  useModalFocus({ active: present, containerRef: dialogRef, onClose: dismissCart });
 
   const items = lines.flatMap((line) => {
     const product = catalogProducts.find((item) => item.slug === line.slug);
@@ -51,11 +57,12 @@ export function CartDrawer() {
   const checkoutBlocked = missingLines.length > 0 || items.some(({ product, quantity }) => (
     !product.orderable || (product.stock > 0 && quantity > product.stock)
   ));
-  const checkoutAvailable = Boolean(supabase) && legalDocumentsPublished;
+  const checkoutAvailable = Boolean(supabase) && catalogReady && legalDocumentsPublished && !checkingCheckout;
 
   useEffect(() => {
-    if (!supabase) { setCatalogReady(true); return; }
+    if (!supabase || !isOpen) return;
     let active = true;
+    setCheckingCheckout(true);
     void (async () => {
       const [productResult, legalResult] = await Promise.all([
         supabase.from("products").select("slug,name,subtitle,description,price,orderable,stock_quantity,material,wood_type,metal,dimensions,care,categories(name),product_images(storage_path,external_url,sort_order)").eq("status", "published"),
@@ -65,10 +72,11 @@ export function CartDrawer() {
       if (productResult.data) setCatalogProducts(productResult.data.map((row) => mapSupabaseProduct(row, products.find((item) => item.slug === row.slug))));
       const publishedSlugs = new Set((legalResult.data ?? []).map((document) => document.slug));
       setLegalDocumentsPublished(["offer", "privacy", "personal-data", "returns"].every((slug) => publishedSlugs.has(slug)));
-      setCatalogReady(true);
+      setCatalogReady(Boolean(productResult.data));
+      setCheckingCheckout(false);
     })();
     return () => { active = false; };
-  }, [supabase]);
+  }, [isOpen, supabase]);
 
   useEffect(() => {
     if (!present) { setCheckout(false); setSubmitError(""); }
@@ -89,15 +97,16 @@ export function CartDrawer() {
 
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
-    setSubmitError("");
-
-    const form = new FormData(event.currentTarget);
-    if (!supabase) {
-      setSubmitting(false);
+    if (submittingRef.current) return;
+    if (!supabase || !checkoutAvailable || checkoutBlocked) {
       setSubmitError("Оформление временно недоступно. Попробуйте позже.");
       return;
     }
+
+    const form = new FormData(event.currentTarget);
+    submittingRef.current = true;
+    setSubmitting(true);
+    setSubmitError("");
 
     type OrderResponse = { order_number?: string; error?: string };
     let data: OrderResponse | null = null;
@@ -119,16 +128,22 @@ export function CartDrawer() {
       });
       data = result.data as OrderResponse | null;
       error = result.error;
+      if (error instanceof FunctionsHttpError) {
+        data = await error.context.json().catch(() => null) as OrderResponse | null;
+      }
     } catch (caughtError) {
       error = caughtError;
     }
 
+    submittingRef.current = false;
+    setSubmitting(false);
     if (error || !data?.order_number) {
-      setSubmitting(false);
       const code = data?.error;
       setSubmitError(
         code === "empty_cart" || code === "stock_changed"
           ? "Состав корзины изменился. Вернитесь в корзину, проверьте товары и попробуйте ещё раз."
+          : code === "invalid_checkout"
+            ? "Проверьте контактные данные и отметьте оба согласия."
           : code === "legal_documents_unavailable"
             ? "Оформление временно недоступно. Товары остались в корзине. Попробуйте позже."
           : "Не удалось подготовить заказ. Товары остались в корзине. Попробуйте ещё раз.",
@@ -144,7 +159,7 @@ export function CartDrawer() {
   }
 
   return (
-    <div className="drawer-backdrop" data-state={isOpen ? "open" : "closing"} role="presentation" onMouseDown={closeCart}>
+    <div className="drawer-backdrop" data-state={isOpen ? "open" : "closing"} role="presentation" onMouseDown={dismissCart}>
       <aside
         ref={dialogRef}
         tabIndex={-1}
@@ -156,7 +171,7 @@ export function CartDrawer() {
       >
         <div className="drawer-header">
           <h2 id="cart-title">{checkout ? "Контакты и доставка" : "Корзина"}</h2>
-          <button ref={closeRef} data-modal-initial-focus className="icon-button" type="button" onClick={closeCart} aria-label="Закрыть корзину">
+          <button ref={closeRef} data-modal-initial-focus className="icon-button" type="button" onClick={dismissCart} disabled={submitting} aria-label="Закрыть корзину">
             <CloseIcon className="icon" />
           </button>
         </div>
@@ -164,7 +179,7 @@ export function CartDrawer() {
         {!checkout ? (
           <>
             <div className="drawer-content">
-              {items.length === 0 && lines.length > 0 && !catalogReady ? (
+              {lines.length > 0 && !catalogReady && checkingCheckout ? (
                 <div className="empty-cart" role="status"><p className="empty-title">Загружаем корзину…</p></div>
               ) : lines.length === 0 ? (
                 <div className="empty-cart">
@@ -214,7 +229,7 @@ export function CartDrawer() {
                       </div>
                       <div className="cart-line-info">
                         <div className="cart-line-title"><div><h3>Товар недоступен</h3><p>{line.slug}</p></div></div>
-                        <p className="checkout-unavailable" role="status">Товар больше не представлен в каталоге.</p>
+                        <p className="checkout-unavailable" role="status">{!catalogReady ? "Не удалось проверить наличие товара." : "Товар больше не представлен в каталоге."}</p>
                         <button className="remove-button" type="button" onClick={() => removeItem(line.slug)}>Удалить</button>
                       </div>
                     </article>
@@ -231,7 +246,7 @@ export function CartDrawer() {
                 <div className="summary-row total"><span>Итого</span><span>{formatPrice(total)}</span></div>
                 {!checkoutAvailable && (
                   <p id="checkout-unavailable" className="checkout-unavailable" role="status">
-                    Оформление заказов временно недоступно. Корзина сохранится на этом устройстве.
+                    {checkingCheckout ? "Проверяем наличие и условия заказа…" : "Оформление заказов временно недоступно. Корзина сохранится на этом устройстве."}
                   </p>
                 )}
                 {checkoutAvailable && checkoutBlocked && (
@@ -255,20 +270,20 @@ export function CartDrawer() {
           </>
         ) : (
           <form ref={checkoutRef} className="checkout-form" onSubmit={submitOrder}>
-            <div className="checkout-fields">
-              <label>Имя<input required name="name" autoComplete="name" placeholder="Анна" /></label>
-              <label>Телефон<input required name="phone" type="tel" autoComplete="tel" inputMode="tel" placeholder="+7 900 000-00-00" /></label>
-              <label>Электронная почта<input required name="email" type="email" autoComplete="email" inputMode="email" placeholder="name@example.com" /></label>
-              <label>Город или населённый пункт<input required name="city" autoComplete="address-level2" placeholder="Владивосток" /></label>
-              <label>Адрес<input required name="address" autoComplete="street-address" placeholder="Улица, дом, квартира" /></label>
+            <div className="checkout-fields" inert={submitting}>
+              <label>Имя<input required maxLength={120} name="name" autoComplete="name" placeholder="Анна" /></label>
+              <label>Телефон<input required maxLength={40} name="phone" type="tel" autoComplete="tel" inputMode="tel" placeholder="+7 900 000-00-00" /></label>
+              <label>Электронная почта<input required maxLength={254} name="email" type="email" autoComplete="email" inputMode="email" placeholder="name@example.com" /></label>
+              <label>Город или населённый пункт<input required maxLength={160} name="city" autoComplete="address-level2" placeholder="Владивосток" /></label>
+              <label>Адрес<input required maxLength={500} name="address" autoComplete="street-address" placeholder="Улица, дом, квартира" /></label>
               <fieldset>
                 <legend>Способ доставки</legend>
                 <label className="radio-label"><input defaultChecked type="radio" name="shipping" value="cdek" />СДЭК</label>
                 <label className="radio-label"><input type="radio" name="shipping" value="post" />Почта России</label>
               </fieldset>
-              <label>Комментарий <span className="muted">(необязательно)</span><textarea name="comment" rows={3} placeholder="Пожелания к заказу" /></label>
+              <label>Комментарий <span className="muted">(необязательно)</span><textarea maxLength={1000} name="comment" rows={3} placeholder="Пожелания к заказу" /></label>
             </div>
-            <fieldset className="checkout-consents">
+            <fieldset className="checkout-consents" disabled={submitting}>
               <legend>Согласия для оформления заказа</legend>
               <div className="checkout-consent">
                 <label htmlFor="offer-accepted">
@@ -295,7 +310,7 @@ export function CartDrawer() {
             </div>
             <p className="form-error" role="alert">{submitError}</p>
             <div className="checkout-actions">
-              <button className="secondary-button" type="button" onClick={() => setCheckout(false)}>Назад к корзине</button>
+              <button className="secondary-button" type="button" disabled={submitting} onClick={() => setCheckout(false)}>Назад к корзине</button>
               <button className="primary-button" type="submit" disabled={submitting}>
                 {submitting ? "Оформляем заказ…" : "Подтвердить заказ"}
               </button>

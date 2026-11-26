@@ -40,3 +40,22 @@ pnpm dev
 - `SUPABASE_PUBLISHABLE_KEY`.
 
 Workflow запускается при отправке изменений в ветку `main` или `master`. Юридические документы хранятся в таблице `legal_documents` и редактируются в разделе «Документы» панели управления.
+
+## Перенос на jetiki.ru
+
+Текущий адрес GitHub Pages работает в подпапке `/je-tiki/`. Workflow берёт префикс и origin из настроек Pages, поэтому после смены домена тот же код соберётся для корня `https://jetiki.ru/`. Внутренние ссылки, изображения из репозитория, canonical, sitemap, манифест и service worker учитывают адрес сборки.
+
+Подготовить сборку для корня можно без переключения DNS:
+
+```bash
+NEXT_PUBLIC_BASE_PATH= NEXT_PUBLIC_SITE_URL=https://jetiki.ru pnpm build
+```
+
+При переключении с Tilda на GitHub Pages:
+
+1. Сохраните копию текущей DNS-зоны. В GitHub откройте настройки аккаунта **Pages**, добавьте и подтвердите `jetiki.ru` с помощью выданной TXT-записи. В **Settings → Pages** репозитория укажите Custom domain `jetiki.ru`. Для этого workflow файл `CNAME` не требуется.
+2. В DNS замените записи старого веб-хостинга для корня на A-записи `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`. Если нужны AAAA, используйте адреса из инструкции GitHub и удалите старые AAAA веб-хостинга. Для `www` при необходимости укажите CNAME `circon3m22.github.io`. Почтовые MX и TXT оставьте в зоне.
+3. Дождитесь проверки DNS и выпуска сертификата, включите **Enforce HTTPS** и запустите Pages workflow вручную. Проверьте старые ссылки, открытие каталога и карточек по прямому URL, юридические тексты, оформление и вход в панель на новом адресе. Сессии и локальные корзины привязаны к домену, поэтому администратору потребуется заново войти и включить уведомления на новом адресе.
+4. В Supabase проверьте Auth → URL Configuration. Если в проекте используются письма для восстановления пароля или другие ссылки с возвратом на сайт, укажите новый Site URL и нужные адреса возврата. Анонимный вход и текущий пароль администратора используют тот же проект Supabase.
+
+[Настройка своего домена в GitHub Pages](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site) · [Проверка владения доменом](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/verifying-your-custom-domain-for-github-pages)

@@ -22,6 +22,8 @@ export function availableProductSlug(name: string, taken: Set<string>) {
   return slug;
 }
 
-export function productHref(slug: string) {
-  return `/product/?slug=${encodeURIComponent(slug)}`;
+export function productHref(slug: string, catalogQuery = "") {
+  const query = new URLSearchParams(catalogQuery);
+  query.set("slug", slug);
+  return `/product/?${query}`;
 }

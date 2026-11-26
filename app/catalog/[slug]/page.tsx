@@ -1,8 +1,11 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CatalogView } from "@/components/catalog-view";
 import { ProductOverlay } from "@/components/product-overlay";
 import { getProduct, products } from "@/lib/products";
+
+import { siteOrigin, siteUrl } from "@/lib/site-url";
 
 export function generateStaticParams() {
   return products.map((product) => ({ slug: product.slug }));
@@ -15,8 +18,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: product.name,
     description: `${product.subtitle}. ${product.description}`,
-    alternates: { canonical: `/catalog/${product.slug}` },
-    openGraph: product.image ? { images: [{ url: product.image }] } : undefined,
+    alternates: { canonical: siteUrl(`/catalog/${product.slug}/`) },
+    openGraph: product.image ? { locale: "ru_RU", siteName: "JE TIKI", images: [{ url: new URL(product.image, siteOrigin).href, alt: product.name }] } : undefined,
   };
 }
 
@@ -26,8 +29,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!product) notFound();
   return (
     <main id="main-content" className="catalog-page section-shell">
-      <CatalogView />
-      <ProductOverlay product={product} slug={slug} />
+      <div><CatalogView /></div>
+      <Suspense><ProductOverlay product={product} slug={slug} /></Suspense>
     </main>
   );
 }

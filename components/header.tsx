@@ -11,6 +11,7 @@ export function Header() {
   const pathname = usePathname();
   const { count, openCart } = useCart();
   const hero = useSiteContent("hero");
+  const isCatalog = pathname.startsWith("/catalog") || pathname.startsWith("/product");
   const isHome = pathname === "/" && Boolean(hero);
   const headerRef = useRef<HTMLElement>(null);
   const logoRef = useRef<HTMLAnchorElement>(null);
@@ -25,8 +26,7 @@ export function Header() {
     let lastFrameTime = 0;
     let targetScroll = Math.max(0, window.scrollY);
     let renderedScroll = targetScroll;
-    let lastWidth = window.innerWidth;
-    let mobile = lastWidth <= 768;
+    let mobile = window.innerWidth <= 768;
     let top = mobile ? 32 : 36;
     let range = 360;
     let startScale = 1;
@@ -38,7 +38,6 @@ export function Header() {
 
     const syncGeometry = () => {
       const width = window.innerWidth;
-      lastWidth = width;
       mobile = width <= 768;
       top = mobile ? 32 : 36;
       const stableHeroHeight = hero?.offsetHeight || window.innerHeight;
@@ -49,7 +48,9 @@ export function Header() {
         ? Math.min(3.1, (width * 0.72) / 116)
         : Math.min(6.2, (width * 0.52) / 116);
       endScale = mobile ? 0.78 : 1;
-      startCenter = stableHeroHeight * (mobile ? 0.36 : 0.4);
+      const shortViewport = window.innerHeight <= 540;
+      if (shortViewport) startScale = Math.min(startScale, 2.6);
+      startCenter = stableHeroHeight * (shortViewport ? 0.30 : mobile ? 0.36 : 0.4);
     };
 
     const render = (scrollPosition: number) => {
@@ -111,17 +112,19 @@ export function Header() {
     };
 
     const handleResize = () => {
-      const widthChanged = Math.abs(window.innerWidth - lastWidth) > 1;
-      if (widthChanged || !mobile) syncGeometry();
+      syncGeometry();
       requestUpdate();
     };
 
     syncGeometry();
     render(renderedScroll);
+    const observer = hero && new ResizeObserver(handleResize);
+    if (observer && hero) observer.observe(hero);
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", handleResize);
     reducedMotion.addEventListener("change", requestUpdate);
     return () => {
+      observer?.disconnect();
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", handleResize);
       reducedMotion.removeEventListener("change", requestUpdate);
@@ -136,8 +139,8 @@ export function Header() {
     >
       <a className="skip-link" href="#main-content">Перейти к содержимому</a>
 
-      <Link className="desktop-catalog-link header-text-link" href="/catalog">Каталог</Link>
-      <Link className="mobile-catalog-link header-icon-button" href="/catalog" aria-label="Открыть каталог">
+      <Link className="desktop-catalog-link header-text-link" href="/catalog" aria-current={isCatalog ? "page" : undefined}>Каталог</Link>
+      <Link className="mobile-catalog-link header-icon-button" href="/catalog" aria-label="Открыть каталог" aria-current={isCatalog ? "page" : undefined}>
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <rect x="4" y="4" width="6" height="6" rx="0.6" />
           <rect x="14" y="4" width="6" height="6" rx="0.6" />

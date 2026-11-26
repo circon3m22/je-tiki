@@ -1,3 +1,4 @@
+import { storefrontImageUrl } from "@/lib/asset-path";
 import type { Product } from "@/lib/types";
 
 type ProductRecord = {
@@ -14,9 +15,9 @@ const publicStorageBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}/storage
 export function mapSupabaseProduct(row: ProductRecord, fallback?: Product): Product {
   const categoryRecord = Array.isArray(row.categories) ? row.categories[0] : row.categories;
   const collectionRecord = Array.isArray(row.collections) ? row.collections[0] : row.collections;
-  const images = (row.product_images ?? [])
+  const images = [...(row.product_images ?? [])]
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((image) => image.external_url || (image.storage_path ? `${publicStorageBase}${image.storage_path}` : ""))
+    .map((image) => image.external_url ? storefrontImageUrl(image.external_url) : (image.storage_path ? `${publicStorageBase}${image.storage_path}` : ""))
     .filter(Boolean);
   return {
     slug: row.slug,
@@ -31,6 +32,7 @@ export function mapSupabaseProduct(row: ProductRecord, fallback?: Product): Prod
     image: images[0] ?? null,
     images,
     collection: collectionRecord?.name || fallback?.collection || "JE TIKI",
+    collectionSlug: collectionRecord?.slug,
     variants: fallback?.variants,
     material: row.material ?? fallback?.material ?? "Натуральное дерево",
     woodType: row.wood_type ?? fallback?.woodType ?? "Дальневосточные породы дерева",

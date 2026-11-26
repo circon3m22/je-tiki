@@ -13,14 +13,16 @@ export function ProductCard({
   priority = false,
   quickAdd = false,
   duplicate = false,
+  catalogQuery = "",
 }: {
   product: Product;
   priority?: boolean;
   quickAdd?: boolean;
   duplicate?: boolean;
+  catalogQuery?: string;
 }) {
   const { addItem } = useCart();
-  const href = productHref(product.slug);
+  const href = productHref(product.slug, catalogQuery);
   const hasAlternateImage = Boolean(product.images[1] && product.images[1] !== product.image);
   return (
     <article className="product-card" aria-hidden={duplicate || undefined}>
@@ -37,7 +39,7 @@ export function ProductCard({
               <Image
                 className="product-image product-image--primary"
                 src={product.image}
-                alt={product.name}
+                alt=""
                 fill
                 sizes="(max-width: 720px) 50vw, (max-width: 1100px) 44vw, 32vw"
                 priority={priority}

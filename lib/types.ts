@@ -16,6 +16,7 @@ export type Product = {
   image: string | null;
   images: string[];
   collection: string;
+  collectionSlug?: string;
   variants?: string[];
   material: string;
   woodType: string;

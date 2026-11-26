@@ -35,6 +35,25 @@ function sanitizeCartLines(value: unknown): CartLine[] {
   return Array.from(quantities, ([slug, quantity]) => ({ slug, quantity }));
 }
 
+async function saveCartLines(
+  supabase: NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,
+  cartId: string,
+  lines: CartLine[],
+) {
+  if (lines.length) {
+    const { error } = await supabase.from("cart_items").upsert(
+      lines.map(({ slug, quantity }) => ({ cart_id: cartId, product_slug: slug, quantity })),
+      { onConflict: "cart_id,product_slug" },
+    );
+    if (error) throw error;
+  }
+  const obsolete = supabase.from("cart_items").delete().eq("cart_id", cartId);
+  const { error } = await (lines.length
+    ? obsolete.not("product_slug", "in", `(${lines.map(({ slug }) => slug).join(",")})`)
+    : obsolete);
+  if (error) throw error;
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -42,6 +61,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [remoteReady, setRemoteReady] = useState(false);
   const remoteCartId = useRef<string | null>(null);
   const linesRef = useRef<CartLine[]>([]);
+  const syncTimeout = useRef<number | undefined>(undefined);
+  const pendingSync = useRef<Promise<void>>(Promise.resolve());
+  const syncingCheckout = useRef(false);
+  const syncedLines = useRef<CartLine[] | null>(null);
 
   useEffect(() => {
     linesRef.current = lines;
@@ -52,7 +75,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) setLines(sanitizeCartLines(JSON.parse(saved)));
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
+      // Storage can be blocked or contain outdated data. Keep the in-memory cart usable.
     } finally {
       setHydrated(true);
     }
@@ -74,17 +97,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         user = data.user;
       }
 
-      const { data: existing } = await client
+      const { data: existing, error: readError } = await client
         .from("carts")
         .select("id, cart_items(product_slug, quantity)")
         .eq("user_id", user.id)
         .maybeSingle();
 
+      if (readError || !active) return;
       let cartId = existing?.id as string | undefined;
       if (!cartId) {
         const { data: created, error } = await client
           .from("carts")
-          .insert({ user_id: user.id })
+          .upsert({ user_id: user.id }, { onConflict: "user_id" })
           .select("id")
           .single();
         if (error || !created) return;
@@ -97,10 +121,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         product_slug: string;
         quantity: number;
       }>;
-      if (lines.length === 0 && remoteLines.length > 0) {
-        setLines(
-          sanitizeCartLines(remoteLines.map((line) => ({ slug: line.product_slug, quantity: line.quantity }))),
-        );
+      if (remoteLines.length > 0) {
+        setLines((current) => current.length ? current :
+          sanitizeCartLines(remoteLines.map((line) => ({ slug: line.product_slug, quantity: line.quantity }))));
       }
       setRemoteReady(true);
     }
@@ -109,8 +132,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-    // Connect once after local hydration. Further updates are synced below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
   useEffect(() => {
@@ -118,31 +139,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
 
-    const timeout = window.setTimeout(async () => {
-      const cartId = remoteCartId.current;
-      if (!cartId) return;
-
-      if (lines.length === 0) {
-        await supabase.from("cart_items").delete().eq("cart_id", cartId);
-        return;
-      }
-
-      await supabase.from("cart_items").delete().eq("cart_id", cartId);
-      await supabase.from("cart_items").upsert(
-        lines.map((line) => ({
-          cart_id: cartId,
-          product_slug: line.slug,
-          quantity: line.quantity,
-        })),
-        { onConflict: "cart_id,product_slug" },
-      );
+    syncTimeout.current = window.setTimeout(() => {
+      pendingSync.current = pendingSync.current.then(async () => {
+        const cartId = remoteCartId.current;
+        if (cartId && !syncingCheckout.current && linesRef.current === lines && syncedLines.current !== lines) {
+          await saveCartLines(supabase, cartId, lines);
+          syncedLines.current = lines;
+        }
+      }).catch(() => {
+        // Local data stays available. Checkout retries the sync with the latest lines.
+      });
     }, 300);
 
-    return () => window.clearTimeout(timeout);
+    return () => window.clearTimeout(syncTimeout.current);
   }, [lines, remoteReady]);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+    if (!hydrated) return;
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines)); } catch {
+      // The cart remains available in memory if browser storage is blocked.
+    }
   }, [hydrated, lines]);
 
   const openCart = useCallback(() => setIsOpen(true), []);
@@ -182,40 +198,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) throw new Error("checkout_unavailable");
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
+    syncingCheckout.current = true;
+    try {
+      window.clearTimeout(syncTimeout.current);
+      await pendingSync.current;
 
-    let user = sessionData.session?.user;
-    if (!user) {
-      const { data, error } = await supabase.auth.signInAnonymously();
-      if (error || !data.user) throw error ?? new Error("anonymous_sign_in_failed");
-      user = data.user;
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      let user = sessionData.session?.user;
+      if (!user) {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error || !data.user) throw error ?? new Error("anonymous_sign_in_failed");
+        user = data.user;
+      }
+
+      const { data: cart, error: cartError } = await supabase
+        .from("carts")
+        .upsert({ user_id: user.id }, { onConflict: "user_id" })
+        .select("id")
+        .single();
+      if (cartError || !cart) throw cartError ?? new Error("cart_create_failed");
+
+      const currentLines = linesRef.current;
+      if (!currentLines.length) throw new Error("empty_cart");
+
+      await saveCartLines(supabase, cart.id, currentLines);
+      syncedLines.current = currentLines;
+    } finally {
+      syncingCheckout.current = false;
     }
-
-    const { data: cart, error: cartError } = await supabase
-      .from("carts")
-      .upsert({ user_id: user.id }, { onConflict: "user_id" })
-      .select("id")
-      .single();
-    if (cartError || !cart) throw cartError ?? new Error("cart_create_failed");
-
-    const currentLines = linesRef.current;
-    if (!currentLines.length) throw new Error("empty_cart");
-
-    const { error: clearError } = await supabase.from("cart_items").delete().eq("cart_id", cart.id);
-    if (clearError) throw clearError;
-
-    const { error: itemsError } = await supabase.from("cart_items").insert(
-      currentLines.map((line) => ({
-        cart_id: cart.id,
-        product_slug: line.slug,
-        quantity: line.quantity,
-      })),
-    );
-    if (itemsError) throw itemsError;
-
-    remoteCartId.current = cart.id;
-    setRemoteReady(true);
   }, []);
 
   const value = useMemo<CartContextValue>(
