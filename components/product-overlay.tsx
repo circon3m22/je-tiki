@@ -1,13 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CloseIcon, MinusIcon, PlusIcon } from "@/components/icons";
 import { useCart } from "@/components/cart-provider";
 import { ProductGallery } from "@/components/product-gallery";
 import { formatPrice, FREE_SHIPPING_THRESHOLD } from "@/lib/money";
-import { assetPath } from "@/lib/asset-path";
 import type { Product } from "@/lib/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { mapSupabaseProduct } from "@/lib/supabase-product";
@@ -58,6 +56,7 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
   const product = liveProduct?.slug === requestedSlug ? liveProduct : null;
 
   const maxQuantity = product?.stock ? Math.min(product.stock, 99) : 99;
+  const purchasePrice = product ? formatPrice(product.price * quantity) : "";
 
   return (
     <section
@@ -69,9 +68,8 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
       aria-labelledby={product ? "product-title" : undefined}
       aria-label={product ? undefined : "Карточка товара"}
     >
-      <div className="product-toolbar">
-        <Image src={assetPath("/je-tiki-logo-v2.svg")} alt="JE TIKI" width={90} height={37} />
-        <button type="button" className="overlay-close" data-modal-initial-focus onClick={closeOverlay}
+      <div className="product-toolbar" tabIndex={-1} data-modal-initial-focus>
+        <button type="button" className="overlay-close" onClick={closeOverlay}
           aria-label="Закрыть карточку товара">
           <CloseIcon className="icon" />
         </button>
@@ -84,8 +82,7 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
             <div className="product-info">
               {product.subtitle && <p className="product-subtitle">{product.subtitle}</p>}
               <h1 id="product-title">{product.name}</h1>
-              <p className="product-price">{formatPrice(product.price)}</p>
-              {product.description && <ProductDescription key={product.slug} description={product.description} />}
+              {product.description && <p className="product-lead">{product.description}</p>}
 
               <div className="product-accordions">
                 <details>
@@ -127,11 +124,23 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
                     <PlusIcon className="icon-sm" />
                   </button>
                 </div>
-                <button className="primary-button" type="button" onClick={() => addItem(product.slug, quantity)}>
-                  Добавить в корзину
+                <button
+                  className="primary-button product-add-button"
+                  type="button"
+                  aria-label={`Добавить в корзину за ${purchasePrice}`}
+                  onClick={() => addItem(product.slug, quantity)}
+                >
+                  <span className="product-add-label">Добавить в корзину</span>
+                  <span className="product-purchase-price">{purchasePrice}</span>
+                  <PlusIcon className="icon" />
                 </button>
               </div>
-            ) : <p className="product-unavailable" role="status">Это изделие временно недоступно для заказа.</p>}
+            ) : (
+              <div className="product-unavailable">
+                <p role="status">Это изделие временно недоступно для заказа.</p>
+                <span className="product-purchase-price">{formatPrice(product.price)}</span>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -147,32 +156,5 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
         </div>
       )}
     </section>
-  );
-}
-
-function ProductDescription({ description }: { description: string }) {
-  const text = useRef<HTMLParagraphElement>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [truncated, setTruncated] = useState(false);
-
-  useEffect(() => {
-    const paragraph = text.current;
-    if (!paragraph || expanded) return;
-    const measure = () => setTruncated(paragraph.scrollHeight > paragraph.clientHeight + 1);
-    const observer = new ResizeObserver(measure);
-    observer.observe(paragraph);
-    measure();
-    return () => observer.disconnect();
-  }, [description, expanded]);
-
-  return (
-    <div className="product-description">
-      <p id="product-description" ref={text} className={`product-lead${expanded ? "" : " product-lead--collapsed"}`}>{description}</p>
-      {truncated && (
-        <button type="button" aria-expanded={expanded} aria-controls="product-description" onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Свернуть описание" : "Читать полностью"}
-        </button>
-      )}
-    </div>
   );
 }
