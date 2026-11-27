@@ -73,7 +73,6 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
         <Image src={assetPath("/je-tiki-logo-v2.svg")} alt="JE TIKI" width={90} height={37} />
         <button type="button" className="overlay-close" data-modal-initial-focus onClick={closeOverlay}
           aria-label="Закрыть карточку товара">
-          <span>Закрыть</span>
           <CloseIcon className="icon" />
         </button>
       </div>

@@ -430,15 +430,14 @@ html:has(.product-page) { scrollbar-gutter: auto; }
 }
 .product-toolbar img { width: 5rem; height: auto; object-fit: contain; }
 .overlay-close {
-  display: inline-flex;
-  align-items: center;
-  gap: .7rem;
-  min-height: 2.75rem;
-  padding: 0 .65rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
   border: 0;
   border-radius: .25rem;
   background: transparent;
-  font-size: .875rem;
   cursor: pointer;
 }
 .overlay-close:hover { background: var(--paper-deep); }
@@ -484,7 +483,7 @@ html:has(.product-page) { scrollbar-gutter: auto; }
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }
-.gallery-image img { object-fit: contain; pointer-events: none; }
+.gallery-image img { object-fit: cover; object-position: center; pointer-events: none; }
 .gallery-pagination {
   display: flex;
   align-items: center;
