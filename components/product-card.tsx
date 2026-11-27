@@ -24,11 +24,20 @@ export function ProductCard({
   const { addItem } = useCart();
   const href = productHref(product.slug, catalogQuery);
   const hasAlternateImage = Boolean(product.images[1] && product.images[1] !== product.image);
+  function openProduct(event: { preventDefault: () => void }) {
+    if (!window.matchMedia("(min-width: 49rem) and (pointer: fine)").matches) return;
+    event.preventDefault();
+    const url = new URL(window.location.href);
+    url.searchParams.set("product", product.slug);
+    window.history.pushState({ jeTikiProduct: product.slug }, "", url);
+  }
+
   return (
     <article className="product-card" aria-hidden={duplicate || undefined}>
       <div className="product-media">
         <Link
           href={href}
+          onNavigate={openProduct}
           className={`product-image-link${hasAlternateImage ? " product-image-link--alternate" : ""}`}
           tabIndex={duplicate ? -1 : undefined}
           onMouseDown={duplicate ? (event) => event.preventDefault() : undefined}
@@ -67,6 +76,7 @@ export function ProductCard({
           <h3>
             <Link
               href={href}
+              onNavigate={openProduct}
               title={product.name}
               tabIndex={duplicate ? -1 : undefined}
               onMouseDown={duplicate ? (event) => event.preventDefault() : undefined}

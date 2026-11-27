@@ -1,16 +1,19 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { CartProvider } from "@/components/cart-provider";
 import { CartDrawer } from "@/components/cart-drawer";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { StorefrontProductOverlay } from "@/components/product-overlay";
 import { SiteContentProvider } from "@/components/site-content-provider";
 import { SiteMotion } from "@/components/site-motion";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = /(^|\/)admin(\/|$)/.test(pathname);
+  const hasProductCards = pathname === "/" || /^\/catalog\/?$/.test(pathname);
 
   if (isAdmin) return children;
   return (
@@ -20,6 +23,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         {children}
         <SiteMotion />
         <Footer />
+        {hasProductCards && <Suspense><StorefrontProductOverlay /></Suspense>}
         <CartDrawer />
       </SiteContentProvider>
     </CartProvider>

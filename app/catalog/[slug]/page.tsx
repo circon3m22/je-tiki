@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CatalogView } from "@/components/catalog-view";
 import { ProductOverlay } from "@/components/product-overlay";
 import { getProduct, products } from "@/lib/products";
 
@@ -28,6 +29,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!product) notFound();
   return (
     <main id="main-content" className="product-page">
+      <div className="catalog-page section-shell product-catalog-background" inert><CatalogView /></div>
       <Suspense fallback={<div className="product-route-loading" role="status">Загружаем товар…</div>}><ProductOverlay product={product} slug={slug} /></Suspense>
     </main>
   );

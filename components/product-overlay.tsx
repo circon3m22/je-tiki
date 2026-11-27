@@ -12,7 +12,26 @@ import { mapSupabaseProduct } from "@/lib/supabase-product";
 import { products as productFallbacks } from "@/lib/products";
 import { useModalFocus } from "@/lib/use-modal-focus";
 
-export function ProductOverlay({ product: fallbackProduct = null, slug }: { product?: Product | null; slug?: string }) {
+export function StorefrontProductOverlay() {
+  const slug = useSearchParams().get("product");
+  const close = useCallback(() => {
+    if (slug && window.history.state?.jeTikiProduct === slug) {
+      window.history.back();
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("product");
+    window.history.replaceState(null, "", url);
+  }, [slug]);
+
+  return slug ? <ProductOverlay key={slug} slug={slug} onClose={close} /> : null;
+}
+
+export function ProductOverlay({ product: fallbackProduct = null, slug, onClose }: {
+  product?: Product | null;
+  slug?: string;
+  onClose?: () => void;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedSlug = slug ?? searchParams.get("slug");
@@ -27,7 +46,10 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
   const [loadState, setLoadState] = useState<"loading" | "missing" | "error" | "ready">("loading");
   const [reloadKey, setReloadKey] = useState(0);
   const dialogRef = useRef<HTMLElement>(null);
-  const closeOverlay = useCallback(() => router.replace(catalogHref, { scroll: false }), [catalogHref, router]);
+  const closeOverlay = useCallback(() => {
+    if (onClose) onClose();
+    else router.replace(catalogHref, { scroll: false });
+  }, [catalogHref, onClose, router]);
 
   useModalFocus({ active: true, containerRef: dialogRef, onClose: closeOverlay });
 
@@ -59,102 +81,100 @@ export function ProductOverlay({ product: fallbackProduct = null, slug }: { prod
   const purchasePrice = product ? formatPrice(product.price * quantity) : "";
 
   return (
-    <section
-      ref={dialogRef}
-      tabIndex={-1}
-      className="product-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={product ? "product-title" : undefined}
-      aria-label={product ? undefined : "Карточка товара"}
-    >
-      <div className="product-toolbar" tabIndex={-1} data-modal-initial-focus>
-        <button type="button" className="overlay-close" onClick={closeOverlay}
-          aria-label="Закрыть карточку товара">
-          <CloseIcon className="icon" />
-        </button>
-      </div>
+    <div className="product-backdrop" onClick={(event) => {
+      if (event.target === event.currentTarget) closeOverlay();
+    }}>
+      <section
+        ref={dialogRef}
+        tabIndex={-1}
+        className="product-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={product ? "product-title" : undefined}
+        aria-label={product ? undefined : "Карточка товара"}
+      >
+        <div className="product-toolbar" tabIndex={-1} data-modal-initial-focus>
+          <button type="button" className="overlay-close" onClick={closeOverlay}
+            aria-label="Закрыть карточку товара">
+            <CloseIcon className="icon" />
+          </button>
+        </div>
 
-      {product ? (
-        <div className="product-layout">
-          <div className="product-content">
-            <ProductGallery key={product.slug} images={product.images} name={product.name} />
-            <div className="product-info">
-              {product.subtitle && <p className="product-subtitle">{product.subtitle}</p>}
-              <h1 id="product-title">{product.name}</h1>
-              {product.description && <p className="product-lead">{product.description}</p>}
+        {product ? (
+          <div className="product-layout">
+            <div className="product-content">
+              <ProductGallery key={product.slug} images={product.images} name={product.name} />
+              <div className="product-info">
+                {product.subtitle && <p className="product-subtitle">{product.subtitle}</p>}
+                <h1 id="product-title">{product.name}</h1>
+                {product.description && <p className="product-lead">{product.description}</p>}
 
-              <div className="product-accordions">
-                <details>
-                  <summary>Характеристики</summary>
-                  <dl className="spec-list">
-                    {product.material && <div><dt>Материал</dt><dd>{product.material}</dd></div>}
-                    <div><dt>Коллекция</dt><dd>{product.collection}</dd></div>
-                    {!!product.variants?.length && <div><dt>Варианты</dt><dd>{product.variants.join(" · ")}</dd></div>}
-                    {product.woodType && <div><dt>Порода дерева</dt><dd>{product.woodType}</dd></div>}
-                    {product.metal && <div><dt>Металл</dt><dd>{product.metal}</dd></div>}
-                    {product.dimensions && <div><dt>Размер</dt><dd>{product.dimensions}</dd></div>}
-                    <div><dt>Наличие</dt><dd>{product.stock > 0 ? `В наличии: ${product.stock}` : product.orderable ? "Доступно под заказ" : "Нет в наличии"}</dd></div>
-                  </dl>
-                  {product.material && <p>Фактура и оттенок дерева могут незначительно отличаться от фотографии.</p>}
-                </details>
-                {product.care && <details>
-                  <summary>Уход</summary>
-                  <p>{product.care}</p>
-                </details>}
-                <details>
-                  <summary>Доставка</summary>
-                  <p>СДЭК или Почта России. Бесплатно при заказе от {formatPrice(FREE_SHIPPING_THRESHOLD)}.</p>
-                </details>
+                <div className="product-accordions">
+                  <details>
+                    <summary>Характеристики</summary>
+                    <dl className="spec-list">
+                      {product.material && <div><dt>Материал</dt><dd>{product.material}</dd></div>}
+                      <div><dt>Коллекция</dt><dd>{product.collection}</dd></div>
+                      {!!product.variants?.length && <div><dt>Варианты</dt><dd>{product.variants.join(" · ")}</dd></div>}
+                      {product.woodType && <div><dt>Порода дерева</dt><dd>{product.woodType}</dd></div>}
+                      {product.metal && <div><dt>Металл</dt><dd>{product.metal}</dd></div>}
+                      {product.dimensions && <div><dt>Размер</dt><dd>{product.dimensions}</dd></div>}
+                      <div><dt>Наличие</dt><dd>{product.stock > 0 ? `В наличии: ${product.stock}` : product.orderable ? "Доступно под заказ" : "Нет в наличии"}</dd></div>
+                    </dl>
+                    {product.material && <p>Фактура и оттенок дерева могут незначительно отличаться от фотографии.</p>}
+                  </details>
+                  {product.care && <details>
+                    <summary>Уход</summary>
+                    <p>{product.care}</p>
+                  </details>}
+                  <details>
+                    <summary>Доставка</summary>
+                    <p>СДЭК или Почта России. Бесплатно при заказе от {formatPrice(FREE_SHIPPING_THRESHOLD)}.</p>
+                  </details>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="product-purchase">
-            {product.orderable ? (
-              <div className="purchase-row">
-                <div className="quantity" role="group" aria-label="Количество">
-                  <button type="button" aria-label="Уменьшить количество" disabled={quantity <= 1}
-                    onClick={() => setQuantity((value) => Math.max(1, value - 1))}>
-                    <MinusIcon className="icon-sm" />
-                  </button>
-                  <span className="tabular" aria-live="polite">{quantity}</span>
-                  <button type="button" aria-label="Увеличить количество" disabled={quantity >= maxQuantity}
-                    onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))}>
-                    <PlusIcon className="icon-sm" />
+            <div className="product-purchase">
+              {product.orderable ? (
+                <div className="purchase-row">
+                  <div className="quantity" role="group" aria-label="Количество">
+                    <button type="button" aria-label="Уменьшить количество" disabled={quantity <= 1}
+                      onClick={() => setQuantity((value) => Math.max(1, value - 1))}>
+                      <MinusIcon className="icon-sm" />
+                    </button>
+                    <span className="tabular" aria-live="polite">{quantity}</span>
+                    <button type="button" aria-label="Увеличить количество" disabled={quantity >= maxQuantity}
+                      onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))}>
+                      <PlusIcon className="icon-sm" />
+                    </button>
+                  </div>
+                  <span className="product-purchase-price" aria-live="polite">{purchasePrice}</span>
+                  <button className="primary-button product-add-button" type="button" onClick={() => addItem(product.slug, quantity)}>
+                    Добавить
                   </button>
                 </div>
-                <button
-                  className="primary-button product-add-button"
-                  type="button"
-                  aria-label={`Добавить в корзину за ${purchasePrice}`}
-                  onClick={() => addItem(product.slug, quantity)}
-                >
-                  <span className="product-add-label">Добавить в корзину</span>
-                  <span className="product-purchase-price">{purchasePrice}</span>
-                  <PlusIcon className="icon" />
-                </button>
-              </div>
-            ) : (
-              <div className="product-unavailable">
-                <p role="status">Это изделие временно недоступно для заказа.</p>
-                <span className="product-purchase-price">{formatPrice(product.price)}</span>
+              ) : (
+                <div className="product-unavailable">
+                  <p role="status">Это изделие временно недоступно для заказа.</p>
+                  <span className="product-purchase-price">{formatPrice(product.price)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="product-status">
+            {loadState === "loading" ? <p role="status">Загружаем товар…</p> : (
+              <div className="product-load-error" role="alert">
+                <p>{loadState === "error" ? "Не удалось загрузить изделие." : "Это изделие сейчас недоступно в каталоге."}</p>
+                {loadState === "error"
+                  ? <button type="button" className="secondary-button" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
+                  : <button type="button" className="secondary-button" onClick={closeOverlay}>Вернуться в каталог</button>}
               </div>
             )}
           </div>
-        </div>
-      ) : (
-        <div className="product-status">
-          {loadState === "loading" ? <p role="status">Загружаем товар…</p> : (
-            <div className="product-load-error" role="alert">
-              <p>{loadState === "error" ? "Не удалось загрузить изделие." : "Это изделие сейчас недоступно в каталоге."}</p>
-              {loadState === "error"
-                ? <button type="button" className="secondary-button" onClick={() => setReloadKey((value) => value + 1)}>Повторить</button>
-                : <button type="button" className="secondary-button" onClick={closeOverlay}>Вернуться в каталог</button>}
-            </div>
-          )}
-        </div>
-      )}
-    </section>
+        )}
+      </section>
+    </div>
   );
 }
