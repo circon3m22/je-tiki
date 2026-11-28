@@ -604,18 +604,27 @@ html:has(.product-page) { scrollbar-gutter: auto; }
   .product-backdrop, .product-route-loading {
     display: grid;
     place-items: center;
-    padding: clamp(1rem, 3vh, 2rem);
+    --product-dialog-gap: clamp(1rem, 3vh, 2rem);
+    padding: var(--product-dialog-gap);
     background: oklch(0.13 0.012 80 / .4);
     backdrop-filter: blur(14px);
   }
   .product-route-loading { color: var(--paper); }
   .product-overlay {
-    width: min(100%, var(--product-width));
-    height: min(100%, 56rem);
+    width: min(100%, var(--product-width), calc((100dvh - 2 * var(--product-dialog-gap)) * .75));
+    height: auto;
+    aspect-ratio: 3 / 4;
     border-radius: .65rem;
     box-shadow: 0 1.25rem 5rem oklch(0 0 0 / .24);
   }
-  .product-content { scrollbar-gutter: auto; scrollbar-width: none; }
+  .product-content {
+    container-type: size;
+    scrollbar-gutter: auto;
+    scrollbar-width: none;
+  }
+  .product-gallery { width: min(100%, max(6rem, calc(100cqh - 7.5rem))); }
+  .product-info { padding-block-start: .75rem; }
+  .product-info h1 { font-size: clamp(1.75rem, 6.7cqw, 2.45rem); }
   .product-content::-webkit-scrollbar { display: none; }
   .product-gallery-viewport--swipe { overflow-x: hidden; }
   .gallery-pagination { display: none; }
