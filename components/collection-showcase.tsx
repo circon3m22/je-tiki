@@ -16,7 +16,7 @@ export type HomeCollection = {
   products: Product[];
 };
 
-export function CollectionShowcase({ collection }: { collection: HomeCollection }) {
+export function CollectionShowcase({ collection, index }: { collection: HomeCollection; index: number }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const railId = useId();
@@ -48,27 +48,27 @@ export function CollectionShowcase({ collection }: { collection: HomeCollection 
     const track = trackRef.current;
     if (!viewport || !track) return;
     const card = track.firstElementChild;
-    const step = card ? card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap) : viewport.clientWidth;
+    const step = card ? card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap) : viewport.clientWidth * .8;
     viewport.scrollBy({ left: direction * step, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   };
 
   return (
-    <article className="collection-showcase">
-      <div className="collection-editorial">
-        <div className="collection-showcase-hero">
+    <article className={`collection-showcase${index % 2 ? " collection-showcase--reverse" : ""}`}>
+      <div className="collection-editorial section-shell">
+        <div className="collection-showcase-hero" data-reveal>
           <Image src={collection.heroImage} alt={`Коллекция «${collection.name}»`} fill sizes="(max-width: 768px) 100vw, 56vw" className="collection-showcase-image" />
         </div>
-        <div className="collection-showcase-copy">
+        <div className="collection-showcase-copy" data-reveal>
           <h3>{collection.name}</h3>
           <p className="collection-description">{expandedStory ? sentences[0].trim() : collection.description}</p>
           {expandedStory && <details className="collection-story"><summary>История коллекции</summary><p>{sentences.slice(1).join("").trim()}</p></details>}
-          <Link className="text-link" href={`/catalog?collection=${encodeURIComponent(collection.slug)}`}>
-            Смотреть коллекцию
+          <Link className="collection-catalog-link" href={`/catalog?collection=${encodeURIComponent(collection.slug)}`}>
+            Смотреть коллекцию <ArrowIcon className="arrow-icon" />
           </Link>
         </div>
       </div>
       {collection.products.length > 0 && (
-        <div className="collection-products">
+        <div className="collection-products section-shell">
           <div className="collection-rail-heading">
             <div className="rail-controls" role="group" aria-label={`Листать коллекцию «${collection.name}»`}>
               <button type="button" className="rail-button rail-button--previous" aria-label="Предыдущие предметы" aria-controls={railId} disabled={edges.start} onClick={() => move(-1)}><ArrowIcon className="arrow-icon" /></button>

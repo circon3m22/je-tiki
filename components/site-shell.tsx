@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { StorefrontProductOverlay } from "@/components/product-overlay";
 import { SiteContentProvider } from "@/components/site-content-provider";
+import { SiteMotion } from "@/components/site-motion";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,6 +21,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       <SiteContentProvider>
         <Header />
         {children}
+        <SiteMotion />
         <Footer />
         {hasProductCards && <Suspense><StorefrontProductOverlay /></Suspense>}
         <CartDrawer />

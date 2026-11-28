@@ -126,7 +126,6 @@ function CatalogContent() {
     <>
       <div className="catalog-heading">
         <h1>Каталог</h1>
-        {selectedCollection && <p>{selectedCollection.name}</p>}
       </div>
       <div className="catalog-controls">
         <div className="category-filter" role="group" aria-label="Категории">

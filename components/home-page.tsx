@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ArrowIcon } from "@/components/icons";
 import { CollectionShowcase, type HomeCollection } from "@/components/collection-showcase";
 import { useSiteContent } from "@/components/site-content-provider";
 import { ProductCard } from "@/components/product-card";
@@ -76,82 +77,78 @@ export function HomePage() {
       }
     });
   }, []);
-  const heroProduct = liveFeatured.find((item) => item.image);
-
   return (
-    <main id="main-content">
-      {hero && (
-        <section className="hero section-shell" aria-labelledby="hero-title">
-          <div className="hero-copy">
-            {hero.eyebrow && <p className="eyebrow">{hero.eyebrow}</p>}
-            <h1 id="hero-title">{hero.title || "JE TIKI"}</h1>
-            {hero.intro && <p className="hero-intro">{hero.intro}</p>}
-            {hero.cta && <Link className="primary-button hero-link" href="/catalog/">{hero.cta}</Link>}
-          </div>
-          <div className="hero-media">
-            <Image src={assetPath("/images/je-tiki/amur-hero-new.webp")} alt="Амур под облачным небом"
-              fill priority sizes="(max-width: 768px) 100vw, 55vw" className="hero-image" />
-            {heroProduct?.image && (
-              <div className="hero-product">
-                <Image src={heroProduct.image} alt={heroProduct.name} fill sizes="(max-width: 768px) 30vw, 16vw" />
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+    <main id="main-content" className={hero ? undefined : "home-without-hero"}>
+      {hero && <section className="hero">
+        <Image
+          src={assetPath("/images/je-tiki/amur-hero-new.webp")}
+          alt="Амур под облачным небом"
+          fill
+          priority
+          sizes="100vw"
+          className="hero-image hero-image--parallax"
+        />
+        <div className="hero-shade" />
+        <div className="hero-copy hero-copy--centered">
+          {hero.eyebrow && <p className="eyebrow light">{hero.eyebrow}</p>}
+          <h1 className="hero-tagline">{hero.title || "JE TIKI"}</h1>
+          {hero.intro && <p className="hero-intro">{hero.intro}</p>}
+          {hero.cta && <Link className="hero-link" href="/catalog">
+            {hero.cta} <ArrowIcon className="arrow-icon" />
+          </Link>}
+        </div>
+      </section>}
 
-      {liveFeatured.length > 0 && (
-        <section className="featured section-shell" aria-labelledby="featured-title">
-          <div className="section-heading">
-            <h2 id="featured-title">Изделия</h2>
-            <Link className="text-link" href="/catalog/">Весь каталог</Link>
+      {intro && <section className="home-intro section-shell" aria-labelledby="home-intro-title">
+        {intro.eyebrow && <p className="eyebrow">{intro.eyebrow}</p>}
+        <div className="home-intro-grid" data-reveal>
+          <h2 id="home-intro-title">{intro.title}</h2>
+          <div>
+            {intro.paragraph1 && <p>{intro.paragraph1}</p>}
+            {intro.paragraph2 && <p>{intro.paragraph2}</p>}
+            {about && <Link className="text-link" href="#about">Знакомство с мастерской <ArrowIcon className="arrow-icon" /></Link>}
           </div>
-          <div className="featured-grid">
-            {liveFeatured.map((product) => <ProductCard key={product.slug} product={product} quickAdd />)}
-          </div>
-        </section>
-      )}
+        </div>
+      </section>}
 
-      {intro && (
-        <section className="home-intro" aria-labelledby="home-intro-title">
-          <div className="home-intro-grid section-shell">
-            <div>
-              {intro.eyebrow && <p className="eyebrow">{intro.eyebrow}</p>}
-              <h2 id="home-intro-title">{intro.title}</h2>
-            </div>
-            <div className="story-copy">
-              {intro.paragraph1 && <p>{intro.paragraph1}</p>}
-              {intro.paragraph2 && <p>{intro.paragraph2}</p>}
-              {about && <Link className="text-link" href="#about">Знакомство с мастерской</Link>}
-            </div>
-          </div>
-        </section>
-      )}
+      {liveCollections.length > 0 && <section className="collection-stories" aria-labelledby="collections-title">
+        <div className="collection-heading section-shell" data-reveal>
+          <h2 id="collections-title">Коллекции</h2>
+        </div>
+        <div className="collection-list">
+          {liveCollections.map((collection, index) => (
+            <CollectionShowcase collection={collection} index={index} key={collection.id} />
+          ))}
+        </div>
+      </section>}
 
-      {liveCollections.length > 0 && (
-        <section className="collection-stories section-shell" aria-labelledby="collections-title">
-          <div className="section-heading"><h2 id="collections-title">Коллекции</h2></div>
-          <div className="collection-list">
-            {liveCollections.map((collection) => <CollectionShowcase collection={collection} key={collection.id} />)}
+      {liveFeatured.length > 0 && <section className="featured section-shell" aria-labelledby="featured-title">
+        <div className="section-heading" data-reveal>
+          <div>
+            <h2 id="featured-title">Предметы</h2>
           </div>
-        </section>
-      )}
+          <Link className="text-link" href="/catalog">Весь каталог <ArrowIcon className="arrow-icon" /></Link>
+        </div>
+        <div className="featured-grid">
+          {liveFeatured.map((product) => (
+            <ProductCard key={product.slug} product={product} />
+          ))}
+        </div>
+      </section>}
 
-      {about && (
-        <section className="about" id="about" aria-labelledby="about-title">
-          <div className="about-grid section-shell">
-            <div>
-              {about.eyebrow && <p className="eyebrow">{about.eyebrow}</p>}
-              <h2 id="about-title">{about.title}</h2>
-            </div>
-            <div className="story-copy">
+      {about && <section className="about" id="about" aria-labelledby="about-title">
+        <div className="about-shell section-shell">
+          {about.eyebrow && <p className="eyebrow">{about.eyebrow}</p>}
+          <div className="about-grid" data-reveal>
+            <h2 id="about-title">{about.title}</h2>
+            <div className="about-copy">
               {about.paragraph1 && <p>{about.paragraph1}</p>}
               {about.paragraph2 && <p>{about.paragraph2}</p>}
-              <Link className="text-link" href="/catalog/">Смотреть все изделия</Link>
+              <Link className="text-link" href="/catalog">Смотреть все предметы</Link>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>}
     </main>
   );
 }
