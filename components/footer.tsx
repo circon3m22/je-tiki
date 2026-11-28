@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { assetPath } from "@/lib/asset-path";
+import { BrandLogo } from "@/components/brand-logo";
 import { useSiteContent } from "@/components/site-content-provider";
 
 export function Footer() {
@@ -10,11 +11,9 @@ export function Footer() {
   const about = useSiteContent("about");
   return (
     <footer className="site-footer">
-      <div className="footer-main">
+      <div className="footer-main section-shell">
         <div className="footer-brand">
-          <Link className="footer-mark" href="/" aria-label="JE TIKI — на главную">
-            <Image src={assetPath("/je-tiki-logo-v2.svg")} alt="" width={241} height={98} />
-          </Link>
+          <Link className="footer-mark" href="/" aria-label="JE TIKI — на главную"><BrandLogo /></Link>
           {contacts?.footer_text && <p className="footer-description">{contacts.footer_text}</p>}
         </div>
         {contacts && <div className="footer-contact">
@@ -35,7 +34,7 @@ export function Footer() {
           <Link href="/legal/personal-data">Персональные данные</Link>
         </nav>
       </div>
-      <div className="footer-bottom">
+      <div className="footer-bottom section-shell">
         <a className="footer-region-mark" href="https://sdelanovkhv.ru/">
           <Image src={assetPath("/made-in-khabarovsk-krai.svg")} alt="Сделано в Хабаровском крае" width={337} height={223} />
         </a>
